@@ -1,7 +1,14 @@
 {
   "page": 0,
   "fields": {
-    "ceoNameTh": { "x": 300, "y": 625, "size": 16 },
+    "ceoNameTh": { "x": 205, "y": 625, "size": 16 },
+    "companyNameFixed": {
+      "page": 0,
+      "x": 400,
+      "y": 665,
+      "size": 16,
+      "value": "บริษัท เอสซีกรุ๊ป (1989) จำกัด"
+    },
     "pharmacyDisplayName": { "x": 320, "y": 600, "size": 16 },
     "soi": { "x": 140, "y": 580, "size": 16 },
     "addressNo": { "x": 495, "y": 600, "size": 16 },
@@ -12,9 +19,24 @@
     "licenseNo": { "x": 155, "y": 600, "size": 16 },
     "operatorTitle": { "x": 410, "y": 555, "size": 16 },
     "operatorWorkHours": { "x": 270, "y": 535, "size": 16 },
+    "docDateDay": { "page": 0, "x": 345, "y": 660, "size": 16, "source": "currentDocumentDate.thai.day" },
+    "docDateMonth": {
+      "page": 0,
+      "x": 420,
+      "y": 660,
+      "size": 16,
+      "source": "currentDocumentDate.thai.monthNameTh"
+    },
+    "docDateYearBE": {
+      "page": 0,
+      "x": 515,
+      "y": 660,
+      "size": 16,
+      "source": "currentDocumentDate.thai.yearBE"
+    },
     "locationText": { "x": 228, "y": 316, "size": 20 },
-    "dateDay": { "x": 96, "y": 281, "size": 20, "maxWidth": 40, "align": "center" },
-    "dateMonthNameTh": { "x": 225, "y": 281, "size": 20, "maxWidth": 92, "align": "center" },
-    "dateYearBE": { "x": 418, "y": 281, "size": 20, "maxWidth": 72, "align": "center" }
+    "dateDay": { "x": 96, "y": 281, "size": 20, "maxWidth": 40, "align": "center", "source": "" },
+    "dateMonthNameTh": { "x": 225, "y": 281, "size": 20, "maxWidth": 92, "align": "center", "source": "" },
+    "dateYearBE": { "x": 418, "y": 281, "size": 20, "maxWidth": 72, "align": "center", "source": "" }
   }
 }

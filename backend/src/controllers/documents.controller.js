@@ -100,6 +100,7 @@ function mapPayloadFromUserData(userRow, documentDate, formData, templateKey) {
     ),
     displayNameTh: pickValue(data.displayNameTh, data.display_name_th, userRow.display_name_th),
     documentDate,
+    currentDocumentDate: documentDate,
     extraFields: Object.fromEntries(
       Object.entries(data).filter(([key]) => !KNOWN_FORM_KEYS.has(key))
     ),

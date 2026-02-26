@@ -156,6 +156,21 @@ function resolveNumber(value, fallback) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function getByPath(objectValue, dottedPath) {
+  const pathText = toNonEmptyString(dottedPath);
+  if (!pathText) {
+    return undefined;
+  }
+
+  return pathText.split(".").reduce((current, segment) => {
+    if (!current || typeof current !== "object") {
+      return undefined;
+    }
+
+    return current[segment];
+  }, objectValue);
+}
+
 function computeAlignedX(text, font, size, fieldConfig) {
   const baseX = resolveNumber(fieldConfig?.x, 0);
   const maxWidth = resolveNumber(fieldConfig?.maxWidth, null);
@@ -246,6 +261,18 @@ function drawMappedField(page, font, value, fieldConfig) {
   });
 }
 
+function resolveFieldValue(fieldName, fieldConfig, payload, normalizedValues) {
+  if (Object.prototype.hasOwnProperty.call(fieldConfig, "value")) {
+    return fieldConfig.value;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(fieldConfig, "source")) {
+    return getByPath(payload, fieldConfig.source);
+  }
+
+  return normalizedValues[fieldName];
+}
+
 export async function stampTemplatePdf({ templateKey, payload }) {
   const { templateKey: resolvedTemplateKey, templateBytes, mapping } =
     await loadTemplateAssets(templateKey);
@@ -267,7 +294,8 @@ export async function stampTemplatePdf({ templateKey, payload }) {
       return;
     }
 
-    drawMappedField(page, thaiFont, values[fieldName], fieldConfig);
+    const fieldValue = resolveFieldValue(fieldName, fieldConfig, payload || {}, values);
+    drawMappedField(page, thaiFont, fieldValue, fieldConfig);
   });
 
   const pdfBytes = await pdfDoc.save();
