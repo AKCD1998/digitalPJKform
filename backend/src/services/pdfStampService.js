@@ -171,6 +171,15 @@ function getByPath(objectValue, dottedPath) {
   }, objectValue);
 }
 
+function resolveSourceValue(payload, normalizedValues, dottedPath) {
+  const fromPayload = getByPath(payload, dottedPath);
+  if (fromPayload !== undefined) {
+    return fromPayload;
+  }
+
+  return getByPath(normalizedValues, dottedPath);
+}
+
 function computeAlignedX(text, font, size, fieldConfig) {
   const baseX = resolveNumber(fieldConfig?.x, 0);
   const maxWidth = resolveNumber(fieldConfig?.maxWidth, null);
@@ -266,11 +275,71 @@ function resolveFieldValue(fieldName, fieldConfig, payload, normalizedValues) {
     return fieldConfig.value;
   }
 
+  if (Array.isArray(fieldConfig?.sources)) {
+    return fieldConfig.sources.map((sourcePath) =>
+      resolveSourceValue(payload, normalizedValues, sourcePath)
+    );
+  }
+
   if (Object.prototype.hasOwnProperty.call(fieldConfig, "source")) {
-    return getByPath(payload, fieldConfig.source);
+    return resolveSourceValue(payload, normalizedValues, fieldConfig.source);
   }
 
   return normalizedValues[fieldName];
+}
+
+function formatThaiDateShort(value) {
+  if (!value) {
+    return "-";
+  }
+
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+
+  const day = date.getDate();
+  const month = date.getMonth() + 1;
+  const yearBE = date.getFullYear() + 543;
+  return `${day}/${month}/${yearBE}`;
+}
+
+function formatTimeRange(value, payload, normalizedValues, fieldConfig) {
+  let startRaw;
+  let endRaw;
+
+  if (Array.isArray(value)) {
+    [startRaw, endRaw] = value;
+  } else if (Array.isArray(fieldConfig?.sources)) {
+    [startRaw, endRaw] = fieldConfig.sources.map((sourcePath) =>
+      resolveSourceValue(payload, normalizedValues, sourcePath)
+    );
+  }
+
+  const start = toNonEmptyString(startRaw);
+  const end = toNonEmptyString(endRaw);
+  if (!start || !end) {
+    return "-";
+  }
+
+  return `${start} - ${end}`;
+}
+
+function applyFieldFormat(value, fieldConfig, payload, normalizedValues) {
+  const format = toNonEmptyString(fieldConfig?.format).toLowerCase();
+  if (!format) {
+    return value;
+  }
+
+  if (format === "thaidateshort") {
+    return formatThaiDateShort(value);
+  }
+
+  if (format === "timerange") {
+    return formatTimeRange(value, payload, normalizedValues, fieldConfig);
+  }
+
+  return value;
 }
 
 export async function stampTemplatePdf({ templateKey, payload }) {
@@ -294,7 +363,8 @@ export async function stampTemplatePdf({ templateKey, payload }) {
       return;
     }
 
-    const fieldValue = resolveFieldValue(fieldName, fieldConfig, payload || {}, values);
+    const rawFieldValue = resolveFieldValue(fieldName, fieldConfig, payload || {}, values);
+    const fieldValue = applyFieldFormat(rawFieldValue, fieldConfig, payload || {}, values);
     drawMappedField(page, thaiFont, fieldValue, fieldConfig);
   });
 

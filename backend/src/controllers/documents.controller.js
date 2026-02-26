@@ -37,6 +37,8 @@ const KNOWN_FORM_KEYS = new Set([
   "pharmacyDisplayName",
   "displayNameTh",
   "display_name_th",
+  "subPharmacistSlots",
+  "sub_pharmacist_slots",
 ]);
 
 function toNonEmptyString(value) {
@@ -67,7 +69,17 @@ function normalizeFormData(input) {
   return input;
 }
 
-function mapPayloadFromUserData(userRow, documentDate, formData, templateKey) {
+function normalizeSubPharmacistSlots(input) {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input
+    .filter((slot) => slot && typeof slot === "object" && !Array.isArray(slot))
+    .slice(0, 10);
+}
+
+function mapPayloadFromUserData(userRow, documentDate, formData, templateKey, subPharmacistSlots) {
   const data = normalizeFormData(formData);
   const pharmacyNameTh = pickValue(
     data.pharmacyNameTh,
@@ -99,6 +111,7 @@ function mapPayloadFromUserData(userRow, documentDate, formData, templateKey) {
       userRow.operator_work_hours
     ),
     displayNameTh: pickValue(data.displayNameTh, data.display_name_th, userRow.display_name_th),
+    subPharmacistSlots: normalizeSubPharmacistSlots(subPharmacistSlots),
     documentDate,
     currentDocumentDate: documentDate,
     extraFields: Object.fromEntries(
@@ -181,6 +194,9 @@ export async function generateDocumentPdf(req, res, next) {
   try {
     const formData = req.body?.formData || {};
     const templateKey = toNonEmptyString(req.body?.templateKey) || DEFAULT_TEMPLATE_KEY;
+    const subPharmacistSlots = normalizeSubPharmacistSlots(
+      req.body?.subPharmacistSlots || formData?.subPharmacistSlots
+    );
     const userRow = await findUserWithBranchById(req.auth.userId);
 
     if (!userRow) {
@@ -188,7 +204,13 @@ export async function generateDocumentPdf(req, res, next) {
     }
 
     const documentDate = await getCurrentDocumentDate();
-    const pdfPayload = mapPayloadFromUserData(userRow, documentDate, formData, templateKey);
+    const pdfPayload = mapPayloadFromUserData(
+      userRow,
+      documentDate,
+      formData,
+      templateKey,
+      subPharmacistSlots
+    );
     const { pdfBytes, templateKey: resolvedTemplateKey } = await stampTemplatePdf({
       templateKey,
       payload: pdfPayload,

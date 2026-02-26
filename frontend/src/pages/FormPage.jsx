@@ -635,6 +635,7 @@ function FormPage() {
         {
           templateKey: selectedTemplateKey,
           formData,
+          subPharmacistSlots,
         },
         {
           save: isAdmin ? saveGeneratedCopy : false,

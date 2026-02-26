@@ -19,20 +19,61 @@
     "licenseNo": { "x": 155, "y": 600, "size": 16 },
     "operatorTitle": { "x": 410, "y": 555, "size": 16 },
     "operatorWorkHours": { "x": 270, "y": 535, "size": 16 },
-    "docDateDay": { "page": 0, "x": 345, "y": 660, "size": 16, "source": "currentDocumentDate.thai.day" },
+    "docDateDay": { "page": 0, "x": 345, "y": 645, "size": 16, "source": "currentDocumentDate.thai.day" },
     "docDateMonth": {
       "page": 0,
       "x": 420,
-      "y": 660,
+      "y": 645,
       "size": 16,
       "source": "currentDocumentDate.thai.monthNameTh"
     },
     "docDateYearBE": {
       "page": 0,
       "x": 515,
-      "y": 660,
+      "y": 645,
       "size": 16,
       "source": "currentDocumentDate.thai.yearBE"
+    },
+    "slot1_pharmacistName": {
+      "page": 0,
+      "x": 130,
+      "y": 440,
+      "size": 16,
+      "source": "subPharmacistSlots.0.pharmacistName"
+    },
+    "slot1_pharmacistLicense": {
+      "page": 0,
+      "x": 500,
+      "y": 440,
+      "size": 16,
+      "source": "subPharmacistSlots.0.pharmacistLicense"
+    },
+    "slot1_dateStart": {
+      "page": 0,
+      "x": 170,
+      "y": 420,
+      "size": 16,
+      "source": "subPharmacistSlots.0.dateStart",
+      "format": "thaiDateShort"
+    },
+    "slot1_dateEnd": {
+      "page": 0,
+      "x": 370,
+      "y": 420,
+      "size": 16,
+      "source": "subPharmacistSlots.0.dateEnd",
+      "format": "thaiDateShort"
+    },
+    "slot1_timeRange": {
+      "page": 0,
+      "x": 180,
+      "y": 400,
+      "size": 16,
+      "format": "timeRange",
+      "sources": [
+        "subPharmacistSlots.0.timeStart",
+        "subPharmacistSlots.0.timeEnd"
+      ]
     },
     "locationText": { "x": 228, "y": 316, "size": 20 },
     "dateDay": { "x": 96, "y": 281, "size": 20, "maxWidth": 40, "align": "center", "source": "" },
