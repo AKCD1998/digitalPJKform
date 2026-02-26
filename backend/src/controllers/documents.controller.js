@@ -1,0 +1,239 @@
+import { CEO_NAME_TH } from "../config/constants.js";
+import {
+  getDocumentById,
+  insertDocumentRecord,
+  listRecentDocuments,
+} from "../services/document-persistence.service.js";
+import { getCurrentDocumentDate } from "../services/document-date.service.js";
+import { generateThaiFormPdf } from "../services/pdfService.js";
+import { findUserWithBranchById } from "../services/user-profile.service.js";
+
+const KNOWN_FORM_KEYS = new Set([
+  "pharmacyNameTh",
+  "pharmacy_name_th",
+  "branchNameTh",
+  "branch_name_th",
+  "soi",
+  "addressNo",
+  "address_no",
+  "district",
+  "province",
+  "postcode",
+  "phone",
+  "licenseNo",
+  "license_no",
+  "locationText",
+  "location_text",
+  "operatorTitle",
+  "operator_title",
+  "operatorWorkHours",
+  "operator_work_hours",
+  "branchCode",
+  "branch_code",
+]);
+
+function toNonEmptyString(value) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const result = String(value).trim();
+  return result.length > 0 ? result : null;
+}
+
+function pickValue(...candidates) {
+  for (const candidate of candidates) {
+    const text = toNonEmptyString(candidate);
+    if (text) {
+      return text;
+    }
+  }
+
+  return "";
+}
+
+function normalizeFormData(input) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    return {};
+  }
+
+  return input;
+}
+
+function mapPayloadFromUserData(userRow, documentDate, formData) {
+  const data = normalizeFormData(formData);
+
+  return {
+    ceoNameTh: CEO_NAME_TH,
+    branchCode: pickValue(data.branchCode, data.branch_code, userRow.branch_code),
+    pharmacyNameTh: pickValue(
+      data.pharmacyNameTh,
+      data.pharmacy_name_th,
+      userRow.pharmacy_name_th
+    ),
+    branchNameTh: pickValue(data.branchNameTh, data.branch_name_th, userRow.branch_name_th),
+    soi: pickValue(data.soi, userRow.soi),
+    addressNo: pickValue(data.addressNo, data.address_no, userRow.address_no),
+    district: pickValue(data.district, userRow.district),
+    province: pickValue(data.province, userRow.province),
+    postcode: pickValue(data.postcode, userRow.postcode),
+    phone: pickValue(data.phone, userRow.phone),
+    licenseNo: pickValue(data.licenseNo, data.license_no, userRow.license_no),
+    locationText: pickValue(data.locationText, data.location_text, userRow.location_text),
+    operatorTitle: pickValue(data.operatorTitle, data.operator_title, userRow.operator_title),
+    operatorWorkHours: pickValue(
+      data.operatorWorkHours,
+      data.operator_work_hours,
+      userRow.operator_work_hours
+    ),
+    documentDate,
+    extraFields: Object.fromEntries(
+      Object.entries(data).filter(([key]) => !KNOWN_FORM_KEYS.has(key))
+    ),
+  };
+}
+
+function shouldSaveDocument(req) {
+  return String(req.query?.save || "").toLowerCase() === "true";
+}
+
+function shouldRenderPdf(req) {
+  return String(req.query?.format || "").toLowerCase() === "pdf";
+}
+
+function isUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    String(value || "")
+  );
+}
+
+function canAccessDocument(req, documentRow) {
+  if (req.auth.role === "admin") {
+    return true;
+  }
+
+  return req.auth.branchId === documentRow.branch_id;
+}
+
+function buildDownloadFileName(payload, dateISOFallback = "document") {
+  const branchCode = payload?.branchCode || "branch";
+  const dateISO = payload?.documentDate?.dateISO || dateISOFallback;
+  return `document-${branchCode}-${dateISO}.pdf`;
+}
+
+function sendPdfResponse(res, pdfBytes, fileName, samplePath, documentId = null) {
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+  res.setHeader("Cache-Control", "no-store");
+
+  if (samplePath) {
+    res.setHeader("X-Sample-Pdf-Path", samplePath);
+  }
+
+  if (documentId) {
+    res.setHeader("X-Document-Id", documentId);
+  }
+
+  return res.status(200).send(Buffer.from(pdfBytes));
+}
+
+function mapRecentDocumentRow(row) {
+  return {
+    id: row.id,
+    createdAt: row.created_at,
+    createdBy: row.created_by,
+    createdByUsername: row.created_by_username,
+    branchId: row.branch_id,
+    branchCode: row.branch_code,
+    documentDateISO: row.document_date_iso || null,
+  };
+}
+
+export async function generateDocumentPdf(req, res, next) {
+  try {
+    const formData = req.body?.formData || {};
+    const userRow = await findUserWithBranchById(req.auth.userId);
+
+    if (!userRow) {
+      return res.status(404).json({ error: "User profile not found." });
+    }
+
+    const documentDate = await getCurrentDocumentDate();
+    const pdfPayload = mapPayloadFromUserData(userRow, documentDate, formData);
+
+    let documentId = null;
+    if (shouldSaveDocument(req)) {
+      const saved = await insertDocumentRecord({
+        createdBy: req.auth.userId,
+        branchId: userRow.user_branch_id,
+        payload: pdfPayload,
+      });
+      documentId = saved.id;
+    }
+
+    const { pdfBytes, samplePath } = await generateThaiFormPdf(pdfPayload);
+    const fileName = buildDownloadFileName(pdfPayload, documentDate.dateISO);
+
+    return sendPdfResponse(res, pdfBytes, fileName, samplePath, documentId);
+  } catch (error) {
+    if (error?.message?.includes("Thai font")) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    return next(error);
+  }
+}
+
+export async function getDocumentByIdHandler(req, res, next) {
+  try {
+    if (!isUuid(req.params.id)) {
+      return res.status(400).json({ error: "Invalid document id." });
+    }
+
+    const documentRow = await getDocumentById(req.params.id);
+    if (!documentRow) {
+      return res.status(404).json({ error: "Document not found." });
+    }
+
+    if (!canAccessDocument(req, documentRow)) {
+      return res.status(403).json({ error: "Forbidden." });
+    }
+
+    if (shouldRenderPdf(req)) {
+      const { pdfBytes, samplePath } = await generateThaiFormPdf(documentRow.payload);
+      const fileName = buildDownloadFileName(documentRow.payload);
+      return sendPdfResponse(res, pdfBytes, fileName, samplePath, documentRow.id);
+    }
+
+    return res.status(200).json({
+      id: documentRow.id,
+      createdBy: documentRow.created_by,
+      createdByUsername: documentRow.created_by_username,
+      branchId: documentRow.branch_id,
+      branchCode: documentRow.branch_code,
+      createdAt: documentRow.created_at,
+      payload: documentRow.payload,
+    });
+  } catch (error) {
+    if (error?.message?.includes("Thai font")) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    return next(error);
+  }
+}
+
+export async function getRecentDocumentsHandler(req, res, next) {
+  try {
+    const rows = await listRecentDocuments({
+      limit: req.query.limit,
+      branchId: req.auth.role === "admin" ? null : req.auth.branchId,
+    });
+
+    return res.status(200).json({
+      documents: rows.map(mapRecentDocumentRow),
+    });
+  } catch (error) {
+    return next(error);
+  }
+}

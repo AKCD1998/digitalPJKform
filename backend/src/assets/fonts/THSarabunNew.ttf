@@ -1,0 +1,3 @@
+PLACEHOLDER FONT FILE
+Replace this file with a real Thai-capable TTF font named THSarabunNew.ttf.
+The PDF endpoint will fail until a valid .ttf is placed here.
