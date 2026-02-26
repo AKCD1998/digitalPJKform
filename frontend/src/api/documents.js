@@ -28,12 +28,18 @@ export async function generateDocumentPdf(formData) {
 }
 
 export async function generateDocumentPdfWithOptions(payload, options = {}) {
-  const formData =
-    payload && typeof payload === "object" && "formData" in payload ? payload.formData : payload;
-  const templateKey =
-    payload && typeof payload === "object" && "templateKey" in payload
-      ? payload.templateKey
-      : DEFAULT_TEMPLATE_KEY;
+  const hasStructuredPayload =
+    payload && typeof payload === "object" && "formData" in payload;
+
+  const requestBody = hasStructuredPayload
+    ? {
+        ...payload,
+        templateKey: payload.templateKey || DEFAULT_TEMPLATE_KEY,
+      }
+    : {
+        formData: payload,
+        templateKey: DEFAULT_TEMPLATE_KEY,
+      };
 
   const params = {};
   if (options.save) {
@@ -42,7 +48,7 @@ export async function generateDocumentPdfWithOptions(payload, options = {}) {
 
   const response = await client.post(
     "/documents/generate",
-    { formData, templateKey },
+    requestBody,
     { responseType: "blob", params }
   );
 
