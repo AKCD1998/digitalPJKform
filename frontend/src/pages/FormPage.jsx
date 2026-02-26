@@ -82,6 +82,18 @@ function openOrDownloadBlob(blob, fileName) {
   window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
 }
 
+function PjkField({ id, label, hint = "", span = 12, children }) {
+  return (
+    <div className={`pjkFieldCard pjkSpan${span}`}>
+      <label className="pjkLabel" htmlFor={id}>
+        {label}
+      </label>
+      {hint ? <p className="pjkHint">{hint}</p> : null}
+      <div>{children}</div>
+    </div>
+  );
+}
+
 function FormPage() {
   const navigate = useNavigate();
   const { user, branch, documentDate, updateDocumentDate, clearSession } = useAuth();
@@ -378,76 +390,117 @@ function FormPage() {
       {pdfError ? <p className="error-text">{pdfError}</p> : null}
       {pdfStatus ? <p className="success-text">{pdfStatus}</p> : null}
 
-      <section className="stack-form section-card">
-        <label>
-          ข้าพเจ้า
-          <input value={CEO_NAME_TH} readOnly />
-        </label>
+      <section className="section-card stack-form">
+        <h2>Branch Profile</h2>
+        <div className="pjkFormGrid">
+          <PjkField id="field-ceo-name" label="ข้าพเจ้า" span={6}>
+            <input id="field-ceo-name" className="pjkInput" value={CEO_NAME_TH} readOnly />
+          </PjkField>
 
-        <label>
-          ชื่อสถานที่ขายยา
-          <input
-            value={`${formData.pharmacyNameTh} ${formData.branchNameTh}`.trim()}
-            readOnly
-          />
-        </label>
+          <PjkField id="field-pharmacy-name" label="ชื่อสถานที่ขายยา" span={6}>
+            <input
+              id="field-pharmacy-name"
+              className="pjkInput"
+              value={`${formData.pharmacyNameTh} ${formData.branchNameTh}`.trim()}
+              readOnly
+            />
+          </PjkField>
 
-        <label>
-          ตรอก/ซอย
-          <input value={formData.soi} onChange={handleChange("soi")} />
-        </label>
+          <PjkField id="field-address-no" label="ตั้งอยู่เลขที่" span={6}>
+            <input
+              id="field-address-no"
+              className="pjkInput"
+              value={formData.addressNo}
+              onChange={handleChange("addressNo")}
+            />
+          </PjkField>
 
-        <label>
-          ตั้งอยู่เลขที่
-          <input value={formData.addressNo} onChange={handleChange("addressNo")} />
-        </label>
+          <PjkField id="field-soi" label="ตรอก/ซอย" span={6}>
+            <input
+              id="field-soi"
+              className="pjkInput"
+              value={formData.soi}
+              onChange={handleChange("soi")}
+            />
+          </PjkField>
 
-        <label>
-          อำเภอ/เขต
-          <input value={formData.district} onChange={handleChange("district")} />
-        </label>
+          <PjkField id="field-district" label="อำเภอ/เขต" span={4}>
+            <input
+              id="field-district"
+              className="pjkInput"
+              value={formData.district}
+              onChange={handleChange("district")}
+            />
+          </PjkField>
 
-        <label>
-          จังหวัด
-          <input value={formData.province} onChange={handleChange("province")} />
-        </label>
+          <PjkField id="field-province" label="จังหวัด" span={4}>
+            <input
+              id="field-province"
+              className="pjkInput"
+              value={formData.province}
+              onChange={handleChange("province")}
+            />
+          </PjkField>
 
-        <label>
-          รหัสไปรษณีย์
-          <input value={formData.postcode} onChange={handleChange("postcode")} />
-        </label>
+          <PjkField id="field-postcode" label="รหัสไปรษณีย์" span={4}>
+            <input
+              id="field-postcode"
+              className="pjkInput"
+              value={formData.postcode}
+              onChange={handleChange("postcode")}
+            />
+          </PjkField>
 
-        <label>
-          โทรศัพท์
-          <input value={formData.phone} onChange={handleChange("phone")} />
-        </label>
+          <PjkField id="field-phone" label="โทรศัพท์" span={6}>
+            <input
+              id="field-phone"
+              className="pjkInput"
+              value={formData.phone}
+              onChange={handleChange("phone")}
+            />
+          </PjkField>
 
-        <label>
-          ใบอนุญาตเลขที่
-          <input value={formData.licenseNo} onChange={handleChange("licenseNo")} />
-        </label>
+          <PjkField id="field-operator-title" label="มี นาย/นาง/นางสาว" span={6}>
+            <input
+              id="field-operator-title"
+              className="pjkInput"
+              value={formData.operatorTitle}
+              onChange={handleChange("operatorTitle")}
+            />
+          </PjkField>
 
-        <label>
-          มี นาย/นาง/นางสาว
-          <input value={formData.operatorTitle} onChange={handleChange("operatorTitle")} />
-        </label>
+          <PjkField
+            id="field-operator-work-hours"
+            label="เป็นผู้มีหน้าที่ปฏิบัติการ เวลาปฏิบัติการ"
+            span={12}
+          >
+            <input
+              id="field-operator-work-hours"
+              className="pjkInput"
+              value={formData.operatorWorkHours}
+              onChange={handleChange("operatorWorkHours")}
+            />
+          </PjkField>
 
-        <label>
-          เป็นผู้มีหน้าที่ปฏิบัติการ เวลาปฏิบัติการ
-          <input
-            value={formData.operatorWorkHours}
-            onChange={handleChange("operatorWorkHours")}
-          />
-        </label>
+          <PjkField id="field-license-no" label="ใบอนุญาตเลขที่" span={6}>
+            <input
+              id="field-license-no"
+              className="pjkInput"
+              value={formData.licenseNo}
+              onChange={handleChange("licenseNo")}
+            />
+          </PjkField>
 
-        <label>
-          เขียนที่
-          <input
-            value={formData.locationText}
-            onChange={handleChange("locationText")}
-            readOnly={!isAdmin}
-          />
-        </label>
+          <PjkField id="field-location-text" label="เขียนที่" span={6}>
+            <input
+              id="field-location-text"
+              className="pjkInput"
+              value={formData.locationText}
+              onChange={handleChange("locationText")}
+              readOnly={!isAdmin}
+            />
+          </PjkField>
+        </div>
       </section>
 
       <section className="section-card stack-form">

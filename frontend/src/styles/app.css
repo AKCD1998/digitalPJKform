@@ -128,6 +128,73 @@ button:disabled {
   gap: 0.75rem;
 }
 
+.pjkFormGrid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.pjkFieldCard {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
+  padding: 0.75rem;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.pjkLabel {
+  display: block;
+  margin: 0;
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.65);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.pjkHint {
+  margin: 0;
+  font-size: 0.76rem;
+  color: rgba(0, 0, 0, 0.52);
+}
+
+.pjkInput {
+  width: 100%;
+  height: 40px;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fff;
+}
+
+.pjkInput:read-only {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.pjkInput:focus {
+  outline: none;
+  border-color: rgba(30, 101, 206, 0.55);
+  box-shadow: 0 0 0 3px rgba(30, 101, 206, 0.14);
+}
+
+.pjkSpan4 {
+  grid-column: span 4;
+}
+
+.pjkSpan6 {
+  grid-column: span 6;
+}
+
+.pjkSpan12 {
+  grid-column: span 12;
+}
+
+.pjkRowSpacer {
+  grid-column: span 12;
+  height: 0.1rem;
+}
+
 .recent-item {
   display: flex;
   justify-content: space-between;
@@ -154,5 +221,28 @@ button:disabled {
 @media (max-width: 760px) {
   .grid-3 {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .pjkFormGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .pjkSpan4,
+  .pjkSpan6,
+  .pjkSpan12 {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 520px) {
+  .pjkFieldCard {
+    padding: 0.62rem;
+  }
+
+  .pjkInput {
+    height: 38px;
+    padding: 8px 10px;
   }
 }
