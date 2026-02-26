@@ -4,11 +4,18 @@ import { getAdminSettings, updateAdminSettings } from "../api/admin.js";
 import {
   generateDocumentPdfWithOptions,
   generatePdfFromSavedDocument,
+  getTemplateDebugGrid,
   listRecentDocuments,
 } from "../api/documents.js";
 import { useAuth } from "../components/AuthProvider.jsx";
 
 const CEO_NAME_TH = "ทรงพล ลิ้มพิสูจน์";
+const TEMPLATE_OPTIONS = [
+  {
+    key: "form_gor_gor_1",
+    label: "แบบคำร้อง กรอกอร์ 1",
+  },
+];
 const THAI_MONTH_NAMES = [
   "มกราคม",
   "กุมภาพันธ์",
@@ -107,7 +114,9 @@ function FormPage() {
   const [pdfGenerating, setPdfGenerating] = useState(false);
   const [pdfStatus, setPdfStatus] = useState("");
   const [pdfError, setPdfError] = useState("");
+  const [gridGenerating, setGridGenerating] = useState(false);
   const [saveGeneratedCopy, setSaveGeneratedCopy] = useState(true);
+  const [selectedTemplateKey, setSelectedTemplateKey] = useState(TEMPLATE_OPTIONS[0].key);
 
   const [recentDocuments, setRecentDocuments] = useState([]);
   const [recentLoading, setRecentLoading] = useState(false);
@@ -255,9 +264,15 @@ function FormPage() {
     setPdfStatus("");
 
     try {
-      const { blob, fileName, documentId } = await generateDocumentPdfWithOptions(formData, {
-        save: isAdmin ? saveGeneratedCopy : false,
-      });
+      const { blob, fileName, documentId } = await generateDocumentPdfWithOptions(
+        {
+          templateKey: selectedTemplateKey,
+          formData,
+        },
+        {
+          save: isAdmin ? saveGeneratedCopy : false,
+        }
+      );
 
       openOrDownloadBlob(blob, fileName);
 
@@ -275,6 +290,24 @@ function FormPage() {
       setPdfError(message);
     } finally {
       setPdfGenerating(false);
+    }
+  };
+
+  const handleOpenDebugGrid = async () => {
+    setGridGenerating(true);
+    setPdfError("");
+
+    try {
+      const { blob, fileName } = await getTemplateDebugGrid(selectedTemplateKey);
+      openOrDownloadBlob(blob, fileName);
+    } catch (error) {
+      const message = await getApiErrorMessage(
+        error,
+        "Unable to open template debug grid."
+      );
+      setPdfError(message);
+    } finally {
+      setGridGenerating(false);
     }
   };
 
@@ -313,6 +346,25 @@ function FormPage() {
       <p className="muted-text">
         Signed in as <strong>{user?.username}</strong> ({user?.role})
       </p>
+      <section className="section-card stack-form">
+        <h2>Template</h2>
+        <label>
+          Template key
+          <select
+            value={selectedTemplateKey}
+            onChange={(event) => setSelectedTemplateKey(event.target.value)}
+          >
+            {TEMPLATE_OPTIONS.map((template) => (
+              <option key={template.key} value={template.key}>
+                {template.label} ({template.key})
+              </option>
+            ))}
+          </select>
+        </label>
+        <button type="button" onClick={handleOpenDebugGrid} disabled={gridGenerating}>
+          {gridGenerating ? "Preparing grid..." : "Open debug grid PDF"}
+        </button>
+      </section>
       {isAdmin ? (
         <label className="inline-label">
           <input

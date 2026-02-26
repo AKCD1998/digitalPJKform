@@ -1,5 +1,7 @@
 import client from "./client.js";
 
+const DEFAULT_TEMPLATE_KEY = "form_gor_gor_1";
+
 function parseFileNameFromContentDisposition(value) {
   if (!value || typeof value !== "string") {
     return null;
@@ -19,10 +21,20 @@ function parseFileNameFromContentDisposition(value) {
 }
 
 export async function generateDocumentPdf(formData) {
-  return generateDocumentPdfWithOptions(formData, { save: false });
+  return generateDocumentPdfWithOptions(
+    { formData, templateKey: DEFAULT_TEMPLATE_KEY },
+    { save: false }
+  );
 }
 
-export async function generateDocumentPdfWithOptions(formData, options = {}) {
+export async function generateDocumentPdfWithOptions(payload, options = {}) {
+  const formData =
+    payload && typeof payload === "object" && "formData" in payload ? payload.formData : payload;
+  const templateKey =
+    payload && typeof payload === "object" && "templateKey" in payload
+      ? payload.templateKey
+      : DEFAULT_TEMPLATE_KEY;
+
   const params = {};
   if (options.save) {
     params.save = "true";
@@ -30,7 +42,7 @@ export async function generateDocumentPdfWithOptions(formData, options = {}) {
 
   const response = await client.post(
     "/documents/generate",
-    { formData },
+    { formData, templateKey },
     { responseType: "blob", params }
   );
 
@@ -67,5 +79,21 @@ export async function generatePdfFromSavedDocument(documentId) {
     blob: response.data,
     fileName: fileName || `document-${documentId}.pdf`,
     documentId: response.headers["x-document-id"] || documentId,
+  };
+}
+
+export async function getTemplateDebugGrid(templateKey = DEFAULT_TEMPLATE_KEY) {
+  const response = await client.get("/documents/debug-grid", {
+    params: { templateKey },
+    responseType: "blob",
+  });
+
+  const fileName = parseFileNameFromContentDisposition(
+    response.headers["content-disposition"]
+  );
+
+  return {
+    blob: response.data,
+    fileName: fileName || `debug-grid-${templateKey}.pdf`,
   };
 }

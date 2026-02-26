@@ -5,7 +5,11 @@ import {
   listRecentDocuments,
 } from "../services/document-persistence.service.js";
 import { getCurrentDocumentDate } from "../services/document-date.service.js";
-import { generateThaiFormPdf } from "../services/pdfService.js";
+import {
+  DEFAULT_TEMPLATE_KEY,
+  generateTemplateDebugGridPdf,
+  stampTemplatePdf,
+} from "../services/pdfStampService.js";
 import { findUserWithBranchById } from "../services/user-profile.service.js";
 
 const KNOWN_FORM_KEYS = new Set([
@@ -30,6 +34,9 @@ const KNOWN_FORM_KEYS = new Set([
   "operator_work_hours",
   "branchCode",
   "branch_code",
+  "pharmacyDisplayName",
+  "displayNameTh",
+  "display_name_th",
 ]);
 
 function toNonEmptyString(value) {
@@ -60,18 +67,23 @@ function normalizeFormData(input) {
   return input;
 }
 
-function mapPayloadFromUserData(userRow, documentDate, formData) {
+function mapPayloadFromUserData(userRow, documentDate, formData, templateKey) {
   const data = normalizeFormData(formData);
+  const pharmacyNameTh = pickValue(
+    data.pharmacyNameTh,
+    data.pharmacy_name_th,
+    userRow.pharmacy_name_th
+  );
+  const branchNameTh = pickValue(data.branchNameTh, data.branch_name_th, userRow.branch_name_th);
+  const pharmacyDisplayName = [pharmacyNameTh, branchNameTh].filter(Boolean).join(" ").trim();
 
   return {
+    templateKey: toNonEmptyString(templateKey) || DEFAULT_TEMPLATE_KEY,
     ceoNameTh: CEO_NAME_TH,
     branchCode: pickValue(data.branchCode, data.branch_code, userRow.branch_code),
-    pharmacyNameTh: pickValue(
-      data.pharmacyNameTh,
-      data.pharmacy_name_th,
-      userRow.pharmacy_name_th
-    ),
-    branchNameTh: pickValue(data.branchNameTh, data.branch_name_th, userRow.branch_name_th),
+    pharmacyNameTh,
+    branchNameTh,
+    pharmacyDisplayName,
     soi: pickValue(data.soi, userRow.soi),
     addressNo: pickValue(data.addressNo, data.address_no, userRow.address_no),
     district: pickValue(data.district, userRow.district),
@@ -86,6 +98,7 @@ function mapPayloadFromUserData(userRow, documentDate, formData) {
       data.operator_work_hours,
       userRow.operator_work_hours
     ),
+    displayNameTh: pickValue(data.displayNameTh, data.display_name_th, userRow.display_name_th),
     documentDate,
     extraFields: Object.fromEntries(
       Object.entries(data).filter(([key]) => !KNOWN_FORM_KEYS.has(key))
@@ -121,14 +134,16 @@ function buildDownloadFileName(payload, dateISOFallback = "document") {
   return `document-${branchCode}-${dateISO}.pdf`;
 }
 
-function sendPdfResponse(res, pdfBytes, fileName, samplePath, documentId = null) {
+function sendPdfResponse(
+  res,
+  pdfBytes,
+  fileName,
+  documentId = null,
+  contentDispositionType = "attachment"
+) {
   res.setHeader("Content-Type", "application/pdf");
-  res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+  res.setHeader("Content-Disposition", `${contentDispositionType}; filename="${fileName}"`);
   res.setHeader("Cache-Control", "no-store");
-
-  if (samplePath) {
-    res.setHeader("X-Sample-Pdf-Path", samplePath);
-  }
 
   if (documentId) {
     res.setHeader("X-Document-Id", documentId);
@@ -149,9 +164,22 @@ function mapRecentDocumentRow(row) {
   };
 }
 
+function handlePdfError(error, res, next) {
+  if (error?.statusCode) {
+    return res.status(error.statusCode).json({ error: error.message });
+  }
+
+  if (error?.message?.includes("Thai font")) {
+    return res.status(500).json({ error: error.message });
+  }
+
+  return next(error);
+}
+
 export async function generateDocumentPdf(req, res, next) {
   try {
     const formData = req.body?.formData || {};
+    const templateKey = toNonEmptyString(req.body?.templateKey) || DEFAULT_TEMPLATE_KEY;
     const userRow = await findUserWithBranchById(req.auth.userId);
 
     if (!userRow) {
@@ -159,7 +187,12 @@ export async function generateDocumentPdf(req, res, next) {
     }
 
     const documentDate = await getCurrentDocumentDate();
-    const pdfPayload = mapPayloadFromUserData(userRow, documentDate, formData);
+    const pdfPayload = mapPayloadFromUserData(userRow, documentDate, formData, templateKey);
+    const { pdfBytes, templateKey: resolvedTemplateKey } = await stampTemplatePdf({
+      templateKey,
+      payload: pdfPayload,
+    });
+    pdfPayload.templateKey = resolvedTemplateKey;
 
     let documentId = null;
     if (shouldSaveDocument(req)) {
@@ -171,16 +204,11 @@ export async function generateDocumentPdf(req, res, next) {
       documentId = saved.id;
     }
 
-    const { pdfBytes, samplePath } = await generateThaiFormPdf(pdfPayload);
     const fileName = buildDownloadFileName(pdfPayload, documentDate.dateISO);
 
-    return sendPdfResponse(res, pdfBytes, fileName, samplePath, documentId);
+    return sendPdfResponse(res, pdfBytes, fileName, documentId);
   } catch (error) {
-    if (error?.message?.includes("Thai font")) {
-      return res.status(500).json({ error: error.message });
-    }
-
-    return next(error);
+    return handlePdfError(error, res, next);
   }
 }
 
@@ -200,9 +228,13 @@ export async function getDocumentByIdHandler(req, res, next) {
     }
 
     if (shouldRenderPdf(req)) {
-      const { pdfBytes, samplePath } = await generateThaiFormPdf(documentRow.payload);
-      const fileName = buildDownloadFileName(documentRow.payload);
-      return sendPdfResponse(res, pdfBytes, fileName, samplePath, documentRow.id);
+      const payload = documentRow.payload || {};
+      const { pdfBytes } = await stampTemplatePdf({
+        templateKey: toNonEmptyString(payload.templateKey) || DEFAULT_TEMPLATE_KEY,
+        payload,
+      });
+      const fileName = buildDownloadFileName(payload);
+      return sendPdfResponse(res, pdfBytes, fileName, documentRow.id);
     }
 
     return res.status(200).json({
@@ -215,11 +247,7 @@ export async function getDocumentByIdHandler(req, res, next) {
       payload: documentRow.payload,
     });
   } catch (error) {
-    if (error?.message?.includes("Thai font")) {
-      return res.status(500).json({ error: error.message });
-    }
-
-    return next(error);
+    return handlePdfError(error, res, next);
   }
 }
 
@@ -235,5 +263,23 @@ export async function getRecentDocumentsHandler(req, res, next) {
     });
   } catch (error) {
     return next(error);
+  }
+}
+
+export async function getDocumentDebugGridHandler(req, res, next) {
+  try {
+    const templateKey = toNonEmptyString(req.query?.templateKey) || DEFAULT_TEMPLATE_KEY;
+    const { pdfBytes, templateKey: resolvedTemplateKey } =
+      await generateTemplateDebugGridPdf(templateKey);
+
+    return sendPdfResponse(
+      res,
+      pdfBytes,
+      `debug-grid-${resolvedTemplateKey}.pdf`,
+      null,
+      "inline"
+    );
+  } catch (error) {
+    return handlePdfError(error, res, next);
   }
 }

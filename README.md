@@ -323,6 +323,7 @@ Request body:
 
 ```json
 {
+  "templateKey": "form_gor_gor_1",
   "formData": {
     "soi": "ซอยที่แก้ไข",
     "addressNo": "123/45",
@@ -338,6 +339,8 @@ Behavior:
   - user branch profile from DB (`branches` table)
   - date from document date rules (`system` / `forced`)
   - `formData` overrides + extra typed fields (for expansion)
+- Stamps values on top of a template PDF from `backend/src/assets/templates/<templateKey>.pdf`
+- Coordinates come from `backend/src/assets/templates/<templateKey>.fields.json`
 - Response: `application/pdf` binary with `Content-Disposition: attachment`
 
 Optional persistence:
@@ -345,6 +348,16 @@ Optional persistence:
 - Use query: `POST /api/documents/generate?save=true`
 - If `save=true`, backend writes to `documents` table and returns header:
   `X-Document-Id: <uuid>`
+
+### GET `/api/documents/debug-grid?templateKey=form_gor_gor_1` (auth required)
+
+Returns the selected template PDF with:
+
+- grid lines every 20 units
+- axis labels for quick coordinate reading
+- coordinate markers every 100 units
+
+Use this endpoint while tuning field `x,y` values in `<templateKey>.fields.json`.
 
 ### GET `/api/documents/:id` (auth required)
 
@@ -428,5 +441,35 @@ Session behavior:
 
 - Put a real Thai-capable font file at:
   `backend/src/assets/fonts/THSarabunNew.ttf`
-- This repo includes a placeholder file at that path.
-- PDF generation will fail with a clear error until the placeholder is replaced.
+- PDF generation will fail with a clear error if the font is missing or still a placeholder.
+
+## Template Stamping Setup
+
+- Put template files in `backend/src/assets/templates`.
+- Naming convention per template:
+  - PDF: `<templateKey>.pdf`
+  - Coordinates: `<templateKey>.fields.json`
+- Example:
+  - `form_gor_gor_1.pdf`
+  - `form_gor_gor_1.fields.json`
+
+Field mapping example:
+
+```json
+{
+  "page": 0,
+  "fields": {
+    "ceoNameTh": { "x": 228, "y": 701, "size": 20 },
+    "pharmacyDisplayName": { "x": 228, "y": 666, "size": 20 },
+    "dateDay": { "x": 96, "y": 281, "size": 20, "maxWidth": 40, "align": "center" }
+  }
+}
+```
+
+## How To Calibrate Fields
+
+1. Call `GET /api/documents/debug-grid?templateKey=form_gor_gor_1` with a valid Bearer token.
+2. Open the returned PDF and read exact coordinates from the grid/labels.
+3. Edit `backend/src/assets/templates/form_gor_gor_1.fields.json`.
+4. Regenerate a document using `POST /api/documents/generate` with the same `templateKey`.
+5. Repeat until text aligns with the printed lines exactly.

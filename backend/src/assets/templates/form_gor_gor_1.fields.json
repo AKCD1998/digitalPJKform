@@ -1,0 +1,20 @@
+{
+  "page": 0,
+  "fields": {
+    "ceoNameTh": { "x": 228, "y": 701, "size": 20 },
+    "pharmacyDisplayName": { "x": 228, "y": 666, "size": 20 },
+    "soi": { "x": 228, "y": 631, "size": 20 },
+    "addressNo": { "x": 228, "y": 596, "size": 20 },
+    "district": { "x": 228, "y": 561, "size": 20 },
+    "province": { "x": 228, "y": 526, "size": 20 },
+    "postcode": { "x": 228, "y": 491, "size": 20 },
+    "phone": { "x": 228, "y": 456, "size": 20 },
+    "licenseNo": { "x": 228, "y": 421, "size": 20 },
+    "operatorTitle": { "x": 228, "y": 386, "size": 20 },
+    "operatorWorkHours": { "x": 364, "y": 351, "size": 20 },
+    "locationText": { "x": 228, "y": 316, "size": 20 },
+    "dateDay": { "x": 96, "y": 281, "size": 20, "maxWidth": 40, "align": "center" },
+    "dateMonthNameTh": { "x": 225, "y": 281, "size": 20, "maxWidth": 92, "align": "center" },
+    "dateYearBE": { "x": 418, "y": 281, "size": 20, "maxWidth": 72, "align": "center" }
+  }
+}
