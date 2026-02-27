@@ -203,6 +203,37 @@ function computeAlignedX(text, font, size, fieldConfig) {
   return baseX;
 }
 
+function countUniquePharmacistAttachments(subPharmacistSlots) {
+  if (!Array.isArray(subPharmacistSlots)) {
+    return 0;
+  }
+
+  const uniqueKeys = new Set();
+
+  subPharmacistSlots.forEach((slot) => {
+    if (!slot || typeof slot !== "object") {
+      return;
+    }
+
+    const normalizedName = toNonEmptyString(slot.pharmacistName).toLowerCase();
+    const normalizedLicense = toNonEmptyString(slot.pharmacistLicense).toLowerCase();
+    const fallbackId = toNonEmptyString(slot.pharmacistId).toLowerCase();
+
+    const dedupeKey =
+      normalizedName && normalizedLicense
+        ? `${normalizedName}|${normalizedLicense}`
+        : fallbackId || `${normalizedName}|${normalizedLicense}`;
+
+    if (!dedupeKey) {
+      return;
+    }
+
+    uniqueKeys.add(dedupeKey);
+  });
+
+  return uniqueKeys.size;
+}
+
 function buildStampValues(payload) {
   // Normalized value dictionary used by fields.json keys.
   const extraFields =
@@ -219,6 +250,9 @@ function buildStampValues(payload) {
       .join(" ");
 
   const thaiDate = payload?.documentDate?.thai || {};
+  const pharmacistAttachmentCount = countUniquePharmacistAttachments(
+    payload?.subPharmacistSlots
+  );
 
   return {
     ...extraFields,
@@ -243,6 +277,7 @@ function buildStampValues(payload) {
     dateDay: toNonEmptyString(thaiDate?.day),
     dateMonthNameTh: toNonEmptyString(thaiDate?.monthNameTh),
     dateYearBE: toNonEmptyString(thaiDate?.yearBE),
+    pharmacistAttachmentCount: String(pharmacistAttachmentCount),
   };
 }
 

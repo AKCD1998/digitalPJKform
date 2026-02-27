@@ -4,8 +4,8 @@
     "ceoNameTh": { "x": 205, "y": 625, "size": 16 },
     "companyNameFixed": {
       "page": 0,
-      "x": 400,
-      "y": 665,
+      "x": 395,
+      "y": 670,
       "size": 16,
       "value": "บริษัท เอสซีกรุ๊ป (1989) จำกัด"
     },
@@ -19,7 +19,7 @@
     "licenseNo": { "x": 155, "y": 600, "size": 16 },
     "operatorTitle": { "x": 410, "y": 555, "size": 16 },
     "operatorWorkHours": { "x": 270, "y": 535, "size": 16 },
-    "docDateDay": { "page": 0, "x": 345, "y": 645, "size": 16, "source": "currentDocumentDate.thai.day" },
+    "docDateDay": { "page": 0, "x": 355, "y": 645, "size": 16, "source": "currentDocumentDate.thai.day" },
     "docDateMonth": {
       "page": 0,
       "x": 420,
@@ -29,7 +29,7 @@
     },
     "docDateYearBE": {
       "page": 0,
-      "x": 515,
+      "x": 502,
       "y": 645,
       "size": 16,
       "source": "currentDocumentDate.thai.yearBE"
@@ -108,7 +108,7 @@
     "slot2_timeRange": {
       "page": 0,
       "x": 180,
-      "y": 338,
+      "y": 336,
       "size": 16,
       "format": "timeRange",
       "sources": [
@@ -116,7 +116,53 @@
         "subPharmacistSlots.1.timeEnd"
       ]
     },
-    "locationText": { "x": 228, "y": 316, "size": 20 },
+    "slot3_pharmacistName": {
+      "page": 0,
+      "x": 130,
+      "y": 312,
+      "size": 16,
+      "source": "subPharmacistSlots.2.pharmacistName"
+    },
+    "slot3_pharmacistLicense": {
+      "page": 0,
+      "x": 500,
+      "y": 312,
+      "size": 16,
+      "source": "subPharmacistSlots.2.pharmacistLicense"
+    },
+    "slot3_dateStart": {
+      "page": 0,
+      "x": 170,
+      "y": 290,
+      "size": 16,
+      "source": "subPharmacistSlots.2.dateStart",
+      "format": "thaiDateShort"
+    },
+    "slot3_dateEnd": {
+      "page": 0,
+      "x": 370,
+      "y": 290,
+      "size": 16,
+      "source": "subPharmacistSlots.2.dateEnd",
+      "format": "thaiDateShort"
+    },
+    "slot3_timeRange": {
+      "page": 0,
+      "x": 180,
+      "y": 268,
+      "size": 16,
+      "format": "timeRange",
+      "sources": [
+        "subPharmacistSlots.2.timeStart",
+        "subPharmacistSlots.2.timeEnd"
+      ]
+    },
+    "pharmacistAttachmentCount": {
+      "page": 0,
+      "x": 340,
+      "y": 200,
+      "size": 16
+    },
     "dateDay": { "x": 96, "y": 281, "size": 20, "maxWidth": 40, "align": "center", "source": "" },
     "dateMonthNameTh": { "x": 225, "y": 281, "size": 20, "maxWidth": 92, "align": "center", "source": "" },
     "dateYearBE": { "x": 418, "y": 281, "size": 20, "maxWidth": 72, "align": "center", "source": "" }
