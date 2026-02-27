@@ -14,14 +14,22 @@ export function authRequired(req, res, next) {
 
   try {
     const payload = verifyAccessToken(token);
-    if (!payload?.userId || !payload?.role || !payload?.branchId) {
+    if (!payload?.userId || !payload?.role) {
+      return res.status(401).json({ error: "Invalid token payload." });
+    }
+
+    if (!["admin", "user"].includes(payload.role)) {
+      return res.status(401).json({ error: "Invalid token payload." });
+    }
+
+    if (payload.role !== "admin" && !payload?.branchId) {
       return res.status(401).json({ error: "Invalid token payload." });
     }
 
     req.auth = {
       userId: payload.userId,
       role: payload.role,
-      branchId: payload.branchId,
+      branchId: payload.branchId || null,
     };
 
     return next();

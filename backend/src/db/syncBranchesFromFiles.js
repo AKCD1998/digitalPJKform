@@ -42,21 +42,30 @@ const UPSERT_BRANCH_SQL = `
   RETURNING id, branch_code;
 `;
 
+function toNullableText(value) {
+  const normalized = String(value ?? "").trim();
+  if (!normalized || normalized === "-") {
+    return null;
+  }
+
+  return normalized;
+}
+
 async function upsertOneBranch(client, branch) {
   const params = [
-    branch.branch_code,
-    branch.pharmacy_name_th,
-    branch.branch_name_th,
-    branch.address_no,
-    branch.soi,
-    branch.district,
-    branch.province,
-    branch.postcode,
-    branch.phone,
-    branch.license_no,
-    branch.location_text,
-    branch.operator_title,
-    branch.operator_work_hours,
+    String(branch.branch_code).trim(),
+    String(branch.pharmacy_name_th).trim(),
+    String(branch.branch_name_th).trim(),
+    toNullableText(branch.address_no),
+    toNullableText(branch.soi),
+    toNullableText(branch.district),
+    toNullableText(branch.province),
+    toNullableText(branch.postcode),
+    toNullableText(branch.phone),
+    toNullableText(branch.license_no),
+    toNullableText(branch.location_text),
+    toNullableText(branch.operator_title),
+    toNullableText(branch.operator_work_hours),
   ];
 
   const result = await client.query(UPSERT_BRANCH_SQL, params);

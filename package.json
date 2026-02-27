@@ -11,6 +11,7 @@
     "migrate": "npm run migrate --workspace backend",
     "seed": "npm run seed --workspace backend",
     "syncBranchesFromFiles": "npm run syncBranchesFromFiles --workspace backend",
+    "syncPartTimePharmacists": "npm run syncPartTimePharmacists --workspace backend",
     "db:setup": "npm run db:setup --workspace backend"
   },
   "devDependencies": {

@@ -10,6 +10,7 @@ import {
   generateTemplateDebugGridPdf,
   stampTemplatePdf,
 } from "../services/pdfStampService.js";
+import { findBranchById } from "../services/branches.service.js";
 import { findUserWithBranchById } from "../services/user-profile.service.js";
 
 const KNOWN_FORM_KEYS = new Set([
@@ -148,6 +149,27 @@ function buildDownloadFileName(payload, dateISOFallback = "document") {
   return `document-${branchCode}-${dateISO}.pdf`;
 }
 
+function buildBranchAwareUserRow(userRow, branchRow) {
+  return {
+    ...userRow,
+    user_branch_id: branchRow.id,
+    branch_id: branchRow.id,
+    branch_code: branchRow.branch_code,
+    pharmacy_name_th: branchRow.pharmacy_name_th,
+    branch_name_th: branchRow.branch_name_th,
+    address_no: branchRow.address_no,
+    soi: branchRow.soi,
+    district: branchRow.district,
+    province: branchRow.province,
+    postcode: branchRow.postcode,
+    phone: branchRow.phone,
+    license_no: branchRow.license_no,
+    location_text: branchRow.location_text,
+    operator_title: branchRow.operator_title,
+    operator_work_hours: branchRow.operator_work_hours,
+  };
+}
+
 function sendPdfResponse(
   res,
   pdfBytes,
@@ -194,6 +216,7 @@ export async function generateDocumentPdf(req, res, next) {
   try {
     const formData = req.body?.formData || {};
     const templateKey = toNonEmptyString(req.body?.templateKey) || DEFAULT_TEMPLATE_KEY;
+    const requestedBranchId = toNonEmptyString(req.body?.branchId);
     const subPharmacistSlots = normalizeSubPharmacistSlots(
       req.body?.subPharmacistSlots || formData?.subPharmacistSlots
     );
@@ -203,9 +226,37 @@ export async function generateDocumentPdf(req, res, next) {
       return res.status(404).json({ error: "User profile not found." });
     }
 
+    let payloadUserRow = userRow;
+    let documentBranchId = userRow.user_branch_id || null;
+
+    if (req.auth.role === "admin") {
+      const adminTargetBranchId = requestedBranchId || userRow.user_branch_id;
+      if (!adminTargetBranchId) {
+        return res.status(400).json({
+          error: "branchId is required for admin users without an assigned branch.",
+        });
+      }
+
+      const targetBranchRow = await findBranchById(adminTargetBranchId);
+      if (!targetBranchRow) {
+        return res.status(404).json({ error: "Branch not found." });
+      }
+
+      payloadUserRow = buildBranchAwareUserRow(userRow, targetBranchRow);
+      documentBranchId = targetBranchRow.id;
+    } else {
+      if (!userRow.user_branch_id) {
+        return res.status(403).json({ error: "Forbidden." });
+      }
+
+      if (requestedBranchId && requestedBranchId !== userRow.user_branch_id) {
+        return res.status(403).json({ error: "Forbidden." });
+      }
+    }
+
     const documentDate = await getCurrentDocumentDate();
     const pdfPayload = mapPayloadFromUserData(
-      userRow,
+      payloadUserRow,
       documentDate,
       formData,
       templateKey,
@@ -219,9 +270,15 @@ export async function generateDocumentPdf(req, res, next) {
 
     let documentId = null;
     if (shouldSaveDocument(req)) {
+      if (!documentBranchId) {
+        return res.status(400).json({
+          error: "Unable to save document because target branch is missing.",
+        });
+      }
+
       const saved = await insertDocumentRecord({
         createdBy: req.auth.userId,
-        branchId: userRow.user_branch_id,
+        branchId: documentBranchId,
         payload: pdfPayload,
       });
       documentId = saved.id;

@@ -23,7 +23,7 @@ const userBranchSelect = `
     b.operator_title,
     b.operator_work_hours
   FROM users u
-  INNER JOIN branches b ON b.id = u.branch_id
+  LEFT JOIN branches b ON b.id = u.branch_id
 `;
 
 export async function findUserWithBranchByUsername(username) {

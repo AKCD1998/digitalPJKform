@@ -4,37 +4,38 @@ import { fileURLToPath } from "node:url";
 import bcrypt from "bcrypt";
 import { closePool, pool } from "./pool.js";
 import { syncBranchesFromFiles } from "./syncBranchesFromFiles.js";
+import { syncPartTimePharmacists } from "./syncPartTimePharmacists.js";
 
 const SALT_ROUNDS = 10;
 
 const USER_SEEDS = [
   {
     username: "admin000",
-    password: "Admin@123",
+    password: "S123123c",
     role: "admin",
     branch_code: "001",
     display_name_th: "ผู้ดูแลระบบ",
   },
   {
     username: "user001",
-    password: "User@123",
+    password: "123123",
     role: "user",
     branch_code: "001",
-    display_name_th: "เภสัชประจำสาขาตลาดแม่กลอง",
+    display_name_th: "ภญ. มณีรัตน์ มาลัยมาลย์",
   },
   {
     username: "user003",
-    password: "User@123",
+    password: "123123",
     role: "user",
     branch_code: "003",
-    display_name_th: "เภสัชประจำสาขาวัดช่องลม",
+    display_name_th: "ภญ. ศุภิสรา ศิริมงคล",
   },
   {
     username: "user004",
-    password: "User@123",
+    password: "123123",
     role: "user",
     branch_code: "004",
-    display_name_th: "เภสัชประจำสาขาตลาดบางน้อย",
+    display_name_th: "ภก. ชวิศ ดิษฐาพร",
   },
 ];
 
@@ -84,6 +85,7 @@ export async function runSeed() {
     await client.query("BEGIN");
 
     const syncedBranches = await syncBranchesFromFiles(client);
+    await syncPartTimePharmacists(client);
     const branchIdByCode = new Map(
       syncedBranches.map((branch) => [branch.branch_code, branch.id])
     );

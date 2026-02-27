@@ -6,6 +6,6 @@ export async function login(payload) {
 }
 
 export async function me() {
-  const response = await client.get("/me");
+  const response = await client.get("/auth/me");
   return response.data;
 }

@@ -6,28 +6,38 @@ import {
 } from "../services/user-profile.service.js";
 
 function buildAuthProfile(row) {
+  const branch =
+    row.branch_id && row.branch_code
+      ? {
+          id: row.branch_id,
+          branchCode: row.branch_code,
+          pharmacyNameTh: row.pharmacy_name_th,
+          branchNameTh: row.branch_name_th,
+          addressNo: row.address_no,
+          soi: row.soi,
+          district: row.district,
+          province: row.province,
+          postcode: row.postcode,
+          phone: row.phone,
+          licenseNo: row.license_no,
+          locationText: row.location_text,
+          operatorTitle: row.operator_title,
+          operatorWorkHours: row.operator_work_hours,
+        }
+      : null;
+
   return {
+    id: row.user_id,
+    role: row.role,
+    branch_id: row.user_branch_id || null,
     user: {
+      id: row.user_id,
       username: row.username,
       role: row.role,
       displayNameTh: row.display_name_th,
+      branchId: row.user_branch_id || null,
     },
-    branch: {
-      id: row.branch_id,
-      branchCode: row.branch_code,
-      pharmacyNameTh: row.pharmacy_name_th,
-      branchNameTh: row.branch_name_th,
-      addressNo: row.address_no,
-      soi: row.soi,
-      district: row.district,
-      province: row.province,
-      postcode: row.postcode,
-      phone: row.phone,
-      licenseNo: row.license_no,
-      locationText: row.location_text,
-      operatorTitle: row.operator_title,
-      operatorWorkHours: row.operator_work_hours,
-    },
+    branch,
   };
 }
 

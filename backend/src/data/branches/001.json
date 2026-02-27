@@ -1,14 +1,14 @@
 {
   "pharmacy_name_th": "ศิริชัยเภสัช",
   "branch_name_th": "ตลาดแม่กลอง",
-  "address_no": "99/1 DUMMY",
-  "soi": "ซอยตัวอย่าง 1",
-  "district": "แม่กลอง",
+  "address_no": "747/19",
+  "soi": "-",
+  "district": "เมืองสมุทรสงคราม",
   "province": "สมุทรสงคราม",
   "postcode": "75000",
-  "phone": "000-000-0001",
-  "license_no": "LIC-DUMMY-001",
-  "location_text": "สมุทรสงคราม",
-  "operator_title": "นาย",
-  "operator_work_hours": "09:00-18:00"
+  "phone": "092-997-9779",
+  "license_no": "สส.2/2563",
+  "location_text": "แม่กลอง",
+  "operator_title": "ภญ.",
+  "operator_work_hours": "08:00-22:00"
 }

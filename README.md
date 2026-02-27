@@ -72,6 +72,7 @@ Copy-Item backend/.env.example backend/.env
 - Run backend + frontend in dev mode: `npm run dev`
 - Run SQL migrations: `npm run migrate`
 - Sync branches from JSON files: `npm run syncBranchesFromFiles`
+- Sync part-time pharmacists from seed list: `npm run syncPartTimePharmacists`
 - Run seed data: `npm run seed`
 - Run migrations + seed together: `npm run db:setup`
 
@@ -82,9 +83,11 @@ Copy-Item backend/.env.example backend/.env
 - Branch JSON source files: `backend/src/data/branches/*.json`
 - Branch loader service: `backend/src/services/branchConfigService.js`
 - Branch sync runner: `backend/src/db/syncBranchesFromFiles.js`
+- Part-time pharmacist sync runner: `backend/src/db/syncPartTimePharmacists.js`
 - Seed runner: `backend/src/db/seed.js`
 - CEO declaration constant: `backend/src/config/constants.js`
 - Document persistence table: `documents` (migration `002_documents_table.sql`)
+- Part-time pharmacist table: `part_time_pharmacists` (migration `003_part_time_pharmacists.sql`)
 
 Seeded branches:
 
@@ -98,6 +101,17 @@ Branch source-of-truth:
 - File name is the `branch_code` (for example `001.json`).
 - Server loads and validates these files on startup.
 - To upsert file changes into PostgreSQL, run `npm run syncBranchesFromFiles`.
+
+Part-time pharmacist source-of-truth:
+
+- Seed list is defined in `backend/src/db/syncPartTimePharmacists.js`.
+- To upsert the list into PostgreSQL, run `npm run syncPartTimePharmacists`.
+- `license_id_number` is the unique key; reruns are safe because inserts use upsert.
+
+Import note for branch + part-time datasets:
+
+- Affected tables: `branches`, `part_time_pharmacists`.
+- Recommended command: `npm run db:setup` (runs migrations then seed, including both sync steps).
 
 Add a new branch:
 

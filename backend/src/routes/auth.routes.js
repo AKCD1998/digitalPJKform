@@ -6,6 +6,7 @@ import { loginRateLimit } from "../middleware/login-rate-limit.middleware.js";
 const router = Router();
 
 router.post("/auth/login", loginRateLimit, login);
+router.get("/auth/me", authRequired, getMe);
 router.get("/me", authRequired, getMe);
 
 export default router;

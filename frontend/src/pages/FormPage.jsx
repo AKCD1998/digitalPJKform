@@ -2,12 +2,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { DayPicker } from "react-day-picker";
 import { getAdminSettings, updateAdminSettings } from "../api/admin.js";
+import { me as getMeProfile } from "../api/auth.js";
+import { getBranchById, listBranches } from "../api/branches.js";
 import {
   generateDocumentPdfWithOptions,
   generatePdfFromSavedDocument,
   getTemplateDebugGrid,
   listRecentDocuments,
 } from "../api/documents.js";
+import { listPartTimePharmacists } from "../api/pharmacists.js";
 import { useAuth } from "../components/AuthProvider.jsx";
 import "react-day-picker/style.css";
 
@@ -34,11 +37,6 @@ const THAI_MONTH_NAMES = [
   "ธันวาคม",
 ];
 
-const pharmacistOptions = [
-  { id: "p1", name: "ตัวอย่าง เภสัชกร 1", license: "ว.12345" },
-  { id: "p2", name: "ตัวอย่าง เภสัชกร 2", license: "ว.67890" },
-];
-
 const INITIAL_TEMP_SUB_PHARMACIST = {
   pharmacistName: "",
   pharmacistId: "",
@@ -50,6 +48,39 @@ const INITIAL_TEMP_SUB_PHARMACIST = {
   timeStart: "09:00",
   timeEnd: "18:00",
 };
+
+function mapBranchProfileToFormData(profile) {
+  return {
+    branchCode: profile?.branch_code || profile?.branchCode || "",
+    pharmacyNameTh: profile?.pharmacy_name_th || profile?.pharmacyNameTh || "",
+    branchNameTh: profile?.branch_name_th || profile?.branchNameTh || "",
+    soi: profile?.soi || "",
+    addressNo: profile?.address_no || profile?.addressNo || "",
+    district: profile?.district || "",
+    province: profile?.province || "",
+    postcode: profile?.postcode || "",
+    phone: profile?.phone || "",
+    licenseNo: profile?.license_no || profile?.licenseNo || "",
+    operatorTitle:
+      profile?.operator_display_name_th ||
+      profile?.operatorDisplayNameTh ||
+      profile?.operator_title ||
+      profile?.operatorTitle ||
+      "",
+    operatorWorkHours: profile?.operator_work_hours || profile?.operatorWorkHours || "",
+    locationText: profile?.location_text || profile?.locationText || "",
+  };
+}
+
+function getBranchOptionLabel(branchOption) {
+  return (
+    branchOption?.pharmacy_name ||
+    branchOption?.pharmacyName ||
+    `${branchOption?.pharmacy_name_th || branchOption?.pharmacyNameTh || ""} ${
+      branchOption?.branch_name_th || branchOption?.branchNameTh || ""
+    }`.trim()
+  );
+}
 
 function toIsoDate(value) {
   const pad = (num) => String(num).padStart(2, "0");
@@ -192,6 +223,9 @@ function SubPharmacistModal({
   isOpen,
   activeSlot,
   tempSubPharmacist,
+  ptPharmacists,
+  ptPharmacistsLoading,
+  ptPharmacistsError,
   guideMode,
   missingFields,
   onClose,
@@ -276,16 +310,22 @@ function SubPharmacistModal({
                   id="modal-pharmacist-select"
                   className="modalFieldInput"
                   value={tempSubPharmacist.pharmacistId}
+                  disabled={ptPharmacistsLoading}
                   onChange={(event) => onSelectPharmacist(event.target.value)}
                 >
-                  <option value="">เลือกเภสัชกร</option>
-                  {pharmacistOptions.map((option) => (
+                  <option value="">
+                    {ptPharmacistsLoading ? "กำลังโหลดรายชื่อเภสัชกร..." : "เลือกเภสัชกร"}
+                  </option>
+                  {ptPharmacists.map((option) => (
                     <option key={option.id} value={option.id}>
-                      {option.name}
+                      {option.display_name}
                     </option>
                   ))}
                 </select>
-                {isPharmacistInvalid ? (
+                {ptPharmacistsError ? (
+                  <p className="fieldHelp">โหลดรายชื่อเภสัชกรไม่สำเร็จ</p>
+                ) : null}
+                {!ptPharmacistsError && isPharmacistInvalid ? (
                   <p className="fieldHelp">กรุณาเลือกเภสัชกร</p>
                 ) : null}
               </div>
@@ -471,10 +511,10 @@ function PdfPreviewModal({
 
 function FormPage() {
   const navigate = useNavigate();
-  const { user, branch, documentDate, updateDocumentDate, clearSession } = useAuth();
-  const isAdmin = user?.role === "admin";
+  const { user, documentDate, updateDocumentDate, clearSession } = useAuth();
 
   const [formData, setFormData] = useState({
+    branchCode: "",
     pharmacyNameTh: "",
     branchNameTh: "",
     soi: "",
@@ -488,6 +528,14 @@ function FormPage() {
     operatorWorkHours: "",
     locationText: "",
   });
+  const [role, setRole] = useState(null);
+  const [branches, setBranches] = useState([]);
+  const [selectedBranchId, setSelectedBranchId] = useState(null);
+  const [branchProfile, setBranchProfile] = useState({});
+  const [branchLoading, setBranchLoading] = useState(false);
+  const [branchError, setBranchError] = useState("");
+  const [isBranchProfileEditing, setIsBranchProfileEditing] = useState(false);
+  const isAdmin = role === "admin";
 
   const [settingsState, setSettingsState] = useState({
     useSystemDate: true,
@@ -497,6 +545,7 @@ function FormPage() {
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [settingsError, setSettingsError] = useState("");
   const [settingsSuccess, setSettingsSuccess] = useState("");
+  const [isDateEditing, setIsDateEditing] = useState(false);
 
   const [pdfGenerating, setPdfGenerating] = useState(false);
   const [pdfStatus, setPdfStatus] = useState("");
@@ -522,6 +571,10 @@ function FormPage() {
   const [recentLoading, setRecentLoading] = useState(false);
   const [recentError, setRecentError] = useState("");
   const [openingDocId, setOpeningDocId] = useState(null);
+  const [recentDateFilter, setRecentDateFilter] = useState("");
+  const [ptPharmacists, setPtPharmacists] = useState([]);
+  const [ptPharmacistsLoading, setPtPharmacistsLoading] = useState(false);
+  const [ptPharmacistsError, setPtPharmacistsError] = useState("");
   const pharmacistAttachmentCount = useMemo(() => {
     const uniquePharmacists = new Set();
 
@@ -548,6 +601,16 @@ function FormPage() {
 
     return uniquePharmacists.size;
   }, [subPharmacistSlots]);
+
+  const filteredRecentDocuments = useMemo(() => {
+    if (!recentDateFilter) {
+      return recentDocuments;
+    }
+
+    return recentDocuments.filter((doc) =>
+      String(doc.documentDateISO || "").startsWith(recentDateFilter)
+    );
+  }, [recentDateFilter, recentDocuments]);
 
   const openPdfPreview = useCallback((blob, fileName) => {
     setPreviewPdfBlob(blob);
@@ -582,25 +645,129 @@ function FormPage() {
   }, [previewPdfBlob]);
 
   useEffect(() => {
-    if (!branch) {
+    let active = true;
+
+    const bootstrapBranchContext = async () => {
+      setBranchError("");
+
+      try {
+        const profile = await getMeProfile();
+        if (!active) {
+          return;
+        }
+
+        const resolvedRole = profile?.role || profile?.user?.role || null;
+        const assignedBranchId =
+          profile?.branch_id || profile?.user?.branchId || profile?.branch?.id || null;
+
+        setRole(resolvedRole);
+
+        if (resolvedRole === "admin") {
+          const branchListResult = await listBranches();
+          if (!active) {
+            return;
+          }
+
+          const availableBranches = branchListResult?.branches || [];
+          setBranches(availableBranches);
+
+          const initialBranchId =
+            assignedBranchId && availableBranches.some((item) => item.id === assignedBranchId)
+              ? assignedBranchId
+              : availableBranches[0]?.id || null;
+
+          setSelectedBranchId(initialBranchId);
+          return;
+        }
+
+        if (!assignedBranchId) {
+          setBranches([]);
+          setSelectedBranchId(null);
+          setBranchProfile({});
+          setFormData((current) => ({
+            ...current,
+            ...mapBranchProfileToFormData(null),
+          }));
+          setBranchError("Your account is not assigned to a branch.");
+          return;
+        }
+
+        setBranches(
+          profile?.branch
+            ? [
+                {
+                  id: profile.branch.id,
+                  pharmacy_name: `${profile.branch.pharmacyNameTh || ""} ${
+                    profile.branch.branchNameTh || ""
+                  }`.trim(),
+                },
+              ]
+            : []
+        );
+        setSelectedBranchId(assignedBranchId);
+      } catch (error) {
+        if (!active) {
+          return;
+        }
+
+        setBranchError(
+          error?.response?.data?.error || error?.message || "Unable to load branch context."
+        );
+      }
+    };
+
+    bootstrapBranchContext();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!selectedBranchId) {
+      setBranchProfile({});
       return;
     }
 
-    setFormData({
-      pharmacyNameTh: branch.pharmacyNameTh || "",
-      branchNameTh: branch.branchNameTh || "",
-      soi: branch.soi || "",
-      addressNo: branch.addressNo || "",
-      district: branch.district || "",
-      province: branch.province || "",
-      postcode: branch.postcode || "",
-      phone: branch.phone || "",
-      licenseNo: branch.licenseNo || "",
-      operatorTitle: branch.operatorTitle || "",
-      operatorWorkHours: branch.operatorWorkHours || "",
-      locationText: branch.locationText || "",
-    });
-  }, [branch]);
+    let active = true;
+    setBranchLoading(true);
+    setBranchError("");
+
+    getBranchById(selectedBranchId)
+      .then((result) => {
+        if (!active) {
+          return;
+        }
+
+        const nextBranchProfile = result?.branch || {};
+        setBranchProfile(nextBranchProfile);
+        setFormData((current) => ({
+          ...current,
+          ...mapBranchProfileToFormData(nextBranchProfile),
+        }));
+      })
+      .catch((error) => {
+        if (!active) {
+          return;
+        }
+
+        setBranchError(
+          error?.response?.data?.error || error?.message || "Unable to load selected branch."
+        );
+      })
+      .finally(() => {
+        if (active) {
+          setBranchLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [selectedBranchId]);
+
+  useEffect(() => {
+    setIsBranchProfileEditing(false);
+  }, [selectedBranchId]);
 
   useEffect(() => {
     if (!isAdmin) {
@@ -671,6 +838,39 @@ function FormPage() {
   }, [isAdmin]);
 
   useEffect(() => {
+    let active = true;
+    setPtPharmacistsLoading(true);
+    setPtPharmacistsError("");
+
+    listPartTimePharmacists()
+      .then((result) => {
+        if (!active) {
+          return;
+        }
+
+        const rows = Array.isArray(result?.pharmacists) ? result.pharmacists : [];
+        setPtPharmacists(rows);
+      })
+      .catch((_error) => {
+        if (!active) {
+          return;
+        }
+
+        setPtPharmacists([]);
+        setPtPharmacistsError("โหลดรายชื่อเภสัชกรไม่สำเร็จ");
+      })
+      .finally(() => {
+        if (active) {
+          setPtPharmacistsLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
     loadRecentDocuments();
   }, [loadRecentDocuments]);
 
@@ -730,6 +930,15 @@ function FormPage() {
     setFormData((current) => ({ ...current, [field]: event.target.value }));
   };
 
+  const handleBranchSelectionChange = (event) => {
+    if (role !== "admin") {
+      return;
+    }
+
+    const nextBranchId = event.target.value;
+    setSelectedBranchId(nextBranchId || null);
+  };
+
   const handleLogout = () => {
     clearSession();
     navigate("/login", { replace: true });
@@ -753,6 +962,7 @@ function FormPage() {
       });
       updateDocumentDate(result.documentDate || null);
       setSettingsSuccess("Date settings updated.");
+      setIsDateEditing(false);
     } catch (error) {
       setSettingsError(
         error?.response?.data?.error ||
@@ -797,10 +1007,17 @@ function FormPage() {
     setPdfError("");
     setPdfStatus("");
 
+    if (!selectedBranchId) {
+      setPdfGenerating(false);
+      setPdfError("Please select a branch before generating PDF.");
+      return;
+    }
+
     try {
       const { blob, fileName, documentId } = await generateDocumentPdfWithOptions(
         {
           templateKey: selectedTemplateKey,
+          branchId: selectedBranchId,
           formData,
           subPharmacistSlots,
         },
@@ -921,14 +1138,16 @@ function FormPage() {
   };
 
   const handlePharmacistSelectChange = (selectedId) => {
-    const selected = pharmacistOptions.find((option) => option.id === selectedId);
+    const selected = ptPharmacists.find((option) => option.id === selectedId);
+    const selectedName = selected?.display_name || "";
+    const selectedLicense = selected?.license_number || "";
 
     setTempSubPharmacist((current) => ({
       ...current,
       pharmacistId: selectedId,
-      pharmacistName: selected ? selected.name : "",
-      pharmacistLicense: selected ? selected.license : "",
-      autoText: selected ? `${selected.name} (${selected.license})` : "",
+      pharmacistName: selectedName,
+      pharmacistLicense: selectedLicense,
+      autoText: selected ? `${selectedName} (${selectedLicense})` : "",
     }));
 
     if (selectedId) {
@@ -1077,11 +1296,8 @@ function FormPage() {
   return (
     <main className="app-shell form-shell">
       <div className="header-row">
-        <h1>Form Profile</h1>
+        <h1>แบบแจ้งการเข้าปฏิบัติหน้าที่แทนผู้มีหน้าที่ปฏิบัติการในสถานที่ขายยาแผนปัจจุบัน</h1>
         <div className="header-actions">
-          <button type="button" onClick={handleGeneratePdf} disabled={pdfGenerating}>
-            {pdfGenerating ? "Generating..." : "Generate PDF"}
-          </button>
           <button type="button" onClick={handleLogout}>
             Log out
           </button>
@@ -1092,41 +1308,15 @@ function FormPage() {
         Signed in as <strong>{user?.username}</strong> ({user?.role})
       </p>
 
-      <section className="section-card stack-form">
-        <h2>Template</h2>
-        <label>
-          Template key
-          <select
-            value={selectedTemplateKey}
-            onChange={(event) => setSelectedTemplateKey(event.target.value)}
-          >
-            {TEMPLATE_OPTIONS.map((template) => (
-              <option key={template.key} value={template.key}>
-                {template.label} ({template.key})
-              </option>
-            ))}
-          </select>
-        </label>
-        <button type="button" onClick={handleOpenDebugGrid} disabled={gridGenerating}>
-          {gridGenerating ? "Preparing grid..." : "Open debug grid PDF"}
-        </button>
-      </section>
-
-      {isAdmin ? (
-        <label className="inline-label">
-          <input
-            type="checkbox"
-            checked={saveGeneratedCopy}
-            onChange={(event) => setSaveGeneratedCopy(event.target.checked)}
-          />
-          Save generated document record
-        </label>
-      ) : null}
       {pdfError ? <p className="error-text">{pdfError}</p> : null}
       {pdfStatus ? <p className="success-text">{pdfStatus}</p> : null}
 
-      <section className="section-card stack-form">
-        <h2>Date</h2>
+      <section
+        className={`section-card stack-form date-section ${
+          isDateEditing ? "is-editing" : "is-locked"
+        }`}
+      >
+        <h2>วันที่เขียนเอกสาร</h2>
 
         {isAdmin ? (
           <div className="stack-form">
@@ -1135,9 +1325,10 @@ function FormPage() {
                 type="radio"
                 name="dateMode"
                 checked={settingsState.useSystemDate}
-                onChange={() =>
-                  setSettingsState((current) => ({ ...current, useSystemDate: true }))
-                }
+                onChange={() => {
+                  setSettingsState((current) => ({ ...current, useSystemDate: true }));
+                  setIsDateEditing(false);
+                }}
               />
               ใช้วันที่จากระบบ
             </label>
@@ -1147,9 +1338,10 @@ function FormPage() {
                 type="radio"
                 name="dateMode"
                 checked={!settingsState.useSystemDate}
-                onChange={() =>
-                  setSettingsState((current) => ({ ...current, useSystemDate: false }))
-                }
+                onChange={() => {
+                  setSettingsState((current) => ({ ...current, useSystemDate: false }));
+                  setIsDateEditing(true);
+                }}
               />
               ใช้วันที่กำหนดเอง
             </label>
@@ -1174,7 +1366,7 @@ function FormPage() {
               onClick={handleSaveDateSettings}
               disabled={settingsLoading || settingsSaving}
             >
-              {settingsSaving ? "Saving..." : "Save date settings"}
+              {settingsSaving ? "กำลังบันทึก..." : "บันทึกการตั้งค่าวันที่"}
             </button>
 
             {settingsError ? <p className="error-text">{settingsError}</p> : null}
@@ -1207,9 +1399,65 @@ function FormPage() {
         </label>
       </section>
 
-      <section className="section-card stack-form">
-        <h2>Branch Profile</h2>
+      <section
+        className={`section-card stack-form branch-profile ${
+          isBranchProfileEditing ? "is-editing" : "is-locked"
+        }`}
+      >
+        <div className="branchProfileHeader">
+          <h2>ข้อมูลสาขา</h2>
+          <button
+            type="button"
+            className="branchProfileEditBtn"
+            onClick={() => setIsBranchProfileEditing((current) => !current)}
+            aria-pressed={isBranchProfileEditing}
+            aria-label={
+              isBranchProfileEditing ? "ล็อกข้อมูลข้อมูลสาขา" : "เปิดโหมดแก้ไขข้อมูลสาขา"
+            }
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M4 20h4l10-10-4-4L4 16v4zm2-2v-1.17l8.06-8.06 1.17 1.17L7.17 18H6zM17.66 3.34l3 3a1 1 0 010 1.41l-1.25 1.25-4.41-4.41 1.25-1.25a1 1 0 011.41 0z"
+                fill="currentColor"
+              />
+            </svg>
+            <span>{isBranchProfileEditing ? "ล็อกข้อมูล" : "แก้ไขข้อมูล"}</span>
+          </button>
+        </div>
         <div className="pjkGrid">
+          <div className="pjkCard span12">
+            <label className="pjkLabel">
+              <span className="pjkLabelText">เลือกสาขา</span>
+              <select
+                className="pjkInput"
+                value={selectedBranchId || ""}
+                onChange={handleBranchSelectionChange}
+                disabled={role !== "admin" || branchLoading}
+              >
+                {branches.length === 0 ? (
+                  <option value="">ไม่มีสาขา</option>
+                ) : null}
+                {branches.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {getBranchOptionLabel(option)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          {branchError ? (
+            <div className="span12">
+              <p className="error-text">{branchError}</p>
+            </div>
+          ) : null}
+
+          {branchLoading ? (
+            <div className="span12">
+              <p className="muted-text">กำลังโหลดข้อมูลสาขาที่เลือก...</p>
+            </div>
+          ) : null}
+
           <FieldCard label="ข้าพเจ้า" span="span12">
             <input className="pjkInput" value={CEO_NAME_TH} readOnly />
           </FieldCard>
@@ -1218,6 +1466,7 @@ function FormPage() {
             <input
               className="pjkInput"
               value={formData.licenseNo}
+              readOnly={!isBranchProfileEditing}
               onChange={handleChange("licenseNo")}
             />
           </FieldCard>
@@ -1234,18 +1483,25 @@ function FormPage() {
             <input
               className="pjkInput"
               value={formData.addressNo}
+              readOnly={!isBranchProfileEditing}
               onChange={handleChange("addressNo")}
             />
           </FieldCard>
 
           <FieldCard label="ตรอก/ซอย" span="span4">
-            <input className="pjkInput" value={formData.soi} onChange={handleChange("soi")} />
+            <input
+              className="pjkInput"
+              value={formData.soi}
+              readOnly={!isBranchProfileEditing}
+              onChange={handleChange("soi")}
+            />
           </FieldCard>
 
           <FieldCard label="อำเภอ/เขต" span="span4">
             <input
               className="pjkInput"
               value={formData.district}
+              readOnly={!isBranchProfileEditing}
               onChange={handleChange("district")}
             />
           </FieldCard>
@@ -1254,6 +1510,7 @@ function FormPage() {
             <input
               className="pjkInput"
               value={formData.province}
+              readOnly={!isBranchProfileEditing}
               onChange={handleChange("province")}
             />
           </FieldCard>
@@ -1262,6 +1519,7 @@ function FormPage() {
             <input
               className="pjkInput"
               value={formData.postcode}
+              readOnly={!isBranchProfileEditing}
               onChange={handleChange("postcode")}
             />
           </FieldCard>
@@ -1270,6 +1528,7 @@ function FormPage() {
             <input
               className="pjkInput"
               value={formData.phone}
+              readOnly={!isBranchProfileEditing}
               onChange={handleChange("phone")}
             />
           </FieldCard>
@@ -1278,6 +1537,7 @@ function FormPage() {
             <input
               className="pjkInput"
               value={formData.operatorTitle}
+              readOnly={!isBranchProfileEditing}
               onChange={handleChange("operatorTitle")}
             />
           </FieldCard>
@@ -1286,6 +1546,7 @@ function FormPage() {
             <input
               className="pjkInput"
               value={formData.operatorWorkHours}
+              readOnly={!isBranchProfileEditing}
               onChange={handleChange("operatorWorkHours")}
             />
           </FieldCard>
@@ -1395,10 +1656,24 @@ function FormPage() {
         </div>
       </section>
 
+      <section className="stack-form section-card generate-section">
+        <button
+          type="button"
+          className="generatePdfBtn"
+          onClick={handleGeneratePdf}
+          disabled={pdfGenerating}
+        >
+          {pdfGenerating ? "Generating..." : "Generate PDF"}
+        </button>
+      </section>
+
       <SubPharmacistModal
         isOpen={isSubPharmacistModalOpen}
         activeSlot={activeSlot}
         tempSubPharmacist={tempSubPharmacist}
+        ptPharmacists={ptPharmacists}
+        ptPharmacistsLoading={ptPharmacistsLoading}
+        ptPharmacistsError={ptPharmacistsError}
         guideMode={guideMode}
         missingFields={missingFields}
         onClose={closeModal}
@@ -1422,31 +1697,48 @@ function FormPage() {
 
       {isAdmin ? (
         <section className="section-card stack-form">
-          <h2>Recent Documents</h2>
+          <div className="recentHeader">
+            <h2>ประวัติเอกสารล่าสุด</h2>
+            <label className="recentDateFilter" htmlFor="recent-date-filter">
+              กรองตามวันที่
+              <input
+                id="recent-date-filter"
+                type="date"
+                value={recentDateFilter}
+                onChange={(event) => setRecentDateFilter(event.target.value)}
+              />
+            </label>
+          </div>
           {recentLoading ? <p className="muted-text">Loading...</p> : null}
           {recentError ? <p className="error-text">{recentError}</p> : null}
-          {!recentLoading && recentDocuments.length === 0 ? (
-            <p className="muted-text">No documents yet.</p>
+          {!recentLoading && filteredRecentDocuments.length === 0 ? (
+            <p className="muted-text">
+              {recentDateFilter ? "No documents for selected date." : "No documents yet."}
+            </p>
           ) : null}
 
-          {recentDocuments.map((doc) => (
-            <div key={doc.id} className="recent-item">
-              <div>
-                <p className="recent-id">{doc.id}</p>
-                <p className="recent-meta">
-                  Branch {doc.branchCode} | By {doc.createdByUsername} | Date{" "}
-                  {doc.documentDateISO || "-"}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleOpenSavedDocument(doc.id)}
-                disabled={openingDocId === doc.id}
-              >
-                {openingDocId === doc.id ? "Preparing..." : "Preview PDF"}
-              </button>
+          {filteredRecentDocuments.length > 0 ? (
+            <div className="recentList">
+              {filteredRecentDocuments.map((doc) => (
+                <div key={doc.id} className="recent-item">
+                  <div>
+                    <p className="recent-id">{doc.id}</p>
+                    <p className="recent-meta">
+                      สาขา {doc.branchCode} | โดย {doc.createdByUsername} | วันที่{" "}
+                      {doc.documentDateISO || "-"}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenSavedDocument(doc.id)}
+                    disabled={openingDocId === doc.id}
+                  >
+                    {openingDocId === doc.id ? "กำลังเตรียม..." : "ดูตัวอย่าง PDF"}
+                  </button>
+                </div>
+              ))}
             </div>
-          ))}
+          ) : null}
         </section>
       ) : null}
     </main>

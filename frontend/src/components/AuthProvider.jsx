@@ -73,7 +73,7 @@ export function AuthProvider({ children }) {
   }, [applySession]);
 
   const updateDocumentDate = useCallback((nextDocumentDate) => {
-    if (!token || !user || !branch) {
+    if (!token || !user) {
       return;
     }
 
@@ -136,7 +136,7 @@ export function AuthProvider({ children }) {
       branch,
       documentDate,
       isBootstrapping,
-      isAuthenticated: Boolean(token && user && branch),
+      isAuthenticated: Boolean(token && user && (user.role === "admin" || branch)),
       loginWithCredentials,
       updateDocumentDate,
       clearSession,
