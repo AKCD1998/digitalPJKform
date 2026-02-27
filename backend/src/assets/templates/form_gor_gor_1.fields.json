@@ -37,21 +37,21 @@
     "slot1_pharmacistName": {
       "page": 0,
       "x": 130,
-      "y": 440,
+      "y": 435,
       "size": 16,
       "source": "subPharmacistSlots.0.pharmacistName"
     },
     "slot1_pharmacistLicense": {
       "page": 0,
       "x": 500,
-      "y": 440,
+      "y": 435,
       "size": 16,
       "source": "subPharmacistSlots.0.pharmacistLicense"
     },
     "slot1_dateStart": {
       "page": 0,
       "x": 170,
-      "y": 420,
+      "y": 415,
       "size": 16,
       "source": "subPharmacistSlots.0.dateStart",
       "format": "thaiDateShort"
