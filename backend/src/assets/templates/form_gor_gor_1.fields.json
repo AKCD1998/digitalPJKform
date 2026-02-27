@@ -37,21 +37,21 @@
     "slot1_pharmacistName": {
       "page": 0,
       "x": 130,
-      "y": 435,
+      "y": 445,
       "size": 16,
       "source": "subPharmacistSlots.0.pharmacistName"
     },
     "slot1_pharmacistLicense": {
       "page": 0,
       "x": 500,
-      "y": 435,
+      "y": 445,
       "size": 16,
       "source": "subPharmacistSlots.0.pharmacistLicense"
     },
     "slot1_dateStart": {
       "page": 0,
       "x": 170,
-      "y": 415,
+      "y": 425,
       "size": 16,
       "source": "subPharmacistSlots.0.dateStart",
       "format": "thaiDateShort"
@@ -59,7 +59,7 @@
     "slot1_dateEnd": {
       "page": 0,
       "x": 370,
-      "y": 420,
+      "y": 425,
       "size": 16,
       "source": "subPharmacistSlots.0.dateEnd",
       "format": "thaiDateShort"
@@ -73,6 +73,47 @@
       "sources": [
         "subPharmacistSlots.0.timeStart",
         "subPharmacistSlots.0.timeEnd"
+      ]
+    },
+    "slot2_pharmacistName": {
+      "page": 0,
+      "x": 130,
+      "y": 378,
+      "size": 16,
+      "source": "subPharmacistSlots.1.pharmacistName"
+    },
+    "slot2_pharmacistLicense": {
+      "page": 0,
+      "x": 500,
+      "y": 378,
+      "size": 16,
+      "source": "subPharmacistSlots.1.pharmacistLicense"
+    },
+    "slot2_dateStart": {
+      "page": 0,
+      "x": 170,
+      "y": 358,
+      "size": 16,
+      "source": "subPharmacistSlots.1.dateStart",
+      "format": "thaiDateShort"
+    },
+    "slot2_dateEnd": {
+      "page": 0,
+      "x": 370,
+      "y": 358,
+      "size": 16,
+      "source": "subPharmacistSlots.1.dateEnd",
+      "format": "thaiDateShort"
+    },
+    "slot2_timeRange": {
+      "page": 0,
+      "x": 180,
+      "y": 338,
+      "size": 16,
+      "format": "timeRange",
+      "sources": [
+        "subPharmacistSlots.1.timeStart",
+        "subPharmacistSlots.1.timeEnd"
       ]
     },
     "locationText": { "x": 228, "y": 316, "size": 20 },
