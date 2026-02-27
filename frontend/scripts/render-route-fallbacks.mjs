@@ -12,7 +12,23 @@ async function createRouteFallbacks() {
   const indexHtml = await fs.readFile(indexPath, "utf8");
 
   await Promise.all(
-    routeFallbacks.map((route) => fs.writeFile(path.join(distDir, route), indexHtml, "utf8"))
+    routeFallbacks.map(async (route) => {
+      const routeDirPath = path.join(distDir, route);
+      const routeIndexPath = path.join(routeDirPath, "index.html");
+
+      // Remove legacy flat fallback files (e.g. dist/login) to avoid browser download behavior.
+      try {
+        const routePathStat = await fs.stat(routeDirPath);
+        if (routePathStat.isFile()) {
+          await fs.rm(routeDirPath, { force: true });
+        }
+      } catch (_error) {
+        // Path does not exist yet, nothing to remove.
+      }
+
+      await fs.mkdir(routeDirPath, { recursive: true });
+      await fs.writeFile(routeIndexPath, indexHtml, "utf8");
+    })
   );
 }
 

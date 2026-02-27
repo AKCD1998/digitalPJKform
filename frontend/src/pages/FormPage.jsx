@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { DayPicker } from "react-day-picker";
 import { getAdminSettings, updateAdminSettings } from "../api/admin.js";
@@ -100,6 +100,17 @@ function openOrDownloadBlob(blob, fileName) {
   }
 
   window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+}
+
+function downloadBlob(blob, fileName) {
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 30_000);
 }
 
 function isSameDate(left, right) {
@@ -378,6 +389,86 @@ function SubPharmacistModal({
   );
 }
 
+function PdfPreviewModal({
+  isOpen,
+  fileName,
+  pdfUrl,
+  iframeRef,
+  onClose,
+  onDownload,
+  onPrint,
+}) {
+  if (!isOpen) {
+    return null;
+  }
+
+  return (
+    <div
+      className="modalBackdrop"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div className="modalPanel modalPanel--pdfPreview" role="dialog" aria-modal="true">
+        <button type="button" className="modalCloseBtn" aria-label="Close preview" onClick={onClose}>
+          ×
+        </button>
+
+        <div className="modalBody pdfPreviewBody">
+          <div className="pdfPreviewToolbar">
+            <div className="pdfPreviewTitleWrap">
+              <h4 className="modalTitle">PDF Preview</h4>
+              <p className="pdfPreviewFileName">{fileName}</p>
+            </div>
+
+            <div className="pdfPreviewActions">
+              <button
+                type="button"
+                className="pdfPreviewActionBtn"
+                onClick={onPrint}
+                aria-label="Print PDF"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M17 8V3H7v5H5a3 3 0 00-3 3v4h4v6h12v-6h4v-4a3 3 0 00-3-3h-2zm-8-3h6v3H9V5zm7 14H8v-5h8v5zm4-6h-2v-1h-2v1H8v-1H6v1H4v-2a1 1 0 011-1h14a1 1 0 011 1v2z"
+                    fill="currentColor"
+                  />
+                </svg>
+                <span>Print</span>
+              </button>
+
+              <button
+                type="button"
+                className="pdfPreviewActionBtn"
+                onClick={onDownload}
+                aria-label="Download PDF"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M12 3a1 1 0 011 1v8.59l2.3-2.29a1 1 0 111.4 1.41l-4 3.99a1 1 0 01-1.4 0l-4-3.99a1 1 0 111.4-1.41l2.3 2.29V4a1 1 0 011-1zm-7 14a1 1 0 011 1v1h12v-1a1 1 0 112 0v2a1 1 0 01-1 1H5a1 1 0 01-1-1v-2a1 1 0 011-1z"
+                    fill="currentColor"
+                  />
+                </svg>
+                <span>Download</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="pdfPreviewFrameShell">
+            {pdfUrl ? (
+              <iframe ref={iframeRef} title="Generated PDF Preview" src={pdfUrl} className="pdfPreviewFrame" />
+            ) : (
+              <p className="muted-text">Preparing preview...</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function FormPage() {
   const navigate = useNavigate();
   const { user, branch, documentDate, updateDocumentDate, clearSession } = useAuth();
@@ -411,6 +502,11 @@ function FormPage() {
   const [pdfStatus, setPdfStatus] = useState("");
   const [pdfError, setPdfError] = useState("");
   const [gridGenerating, setGridGenerating] = useState(false);
+  const [isPdfPreviewModalOpen, setIsPdfPreviewModalOpen] = useState(false);
+  const [previewPdfBlob, setPreviewPdfBlob] = useState(null);
+  const [previewPdfUrl, setPreviewPdfUrl] = useState("");
+  const [previewPdfFileName, setPreviewPdfFileName] = useState("document.pdf");
+  const previewIframeRef = useRef(null);
   const [isSubPharmacistModalOpen, setIsSubPharmacistModalOpen] = useState(false);
   const [activeSlot, setActiveSlot] = useState(null);
   const [tempSubPharmacist, setTempSubPharmacist] = useState({
@@ -452,6 +548,38 @@ function FormPage() {
 
     return uniquePharmacists.size;
   }, [subPharmacistSlots]);
+
+  const openPdfPreview = useCallback((blob, fileName) => {
+    setPreviewPdfBlob(blob);
+    setPreviewPdfFileName(fileName || "document.pdf");
+    setIsPdfPreviewModalOpen(true);
+  }, []);
+
+  const closeSubPharmacistModal = useCallback(() => {
+    setIsSubPharmacistModalOpen(false);
+    setActiveSlot(null);
+    setGuideMode(false);
+    setMissingFields({});
+  }, []);
+
+  const closePdfPreviewModal = useCallback(() => {
+    setIsPdfPreviewModalOpen(false);
+    setPreviewPdfBlob(null);
+    setPreviewPdfFileName("document.pdf");
+  }, []);
+
+  useEffect(() => {
+    if (!previewPdfBlob) {
+      setPreviewPdfUrl("");
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(previewPdfBlob);
+    setPreviewPdfUrl(objectUrl);
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [previewPdfBlob]);
 
   useEffect(() => {
     if (!branch) {
@@ -547,28 +675,39 @@ function FormPage() {
   }, [loadRecentDocuments]);
 
   useEffect(() => {
-    if (!isSubPharmacistModalOpen) {
+    const isAnyModalOpen = isSubPharmacistModalOpen || isPdfPreviewModalOpen;
+    if (!isAnyModalOpen) {
       document.body.classList.remove("modal-open");
       return;
     }
 
     document.body.classList.add("modal-open");
     const onKeyDown = (event) => {
-      if (event.key === "Escape") {
-        setIsSubPharmacistModalOpen(false);
-        setActiveSlot(null);
-        setGuideMode(false);
-        setMissingFields({});
+      if (event.key !== "Escape") {
+        return;
+      }
+
+      if (isPdfPreviewModalOpen) {
+        closePdfPreviewModal();
+        return;
+      }
+
+      if (isSubPharmacistModalOpen) {
+        closeSubPharmacistModal();
       }
     };
 
     window.addEventListener("keydown", onKeyDown);
-
     return () => {
       window.removeEventListener("keydown", onKeyDown);
       document.body.classList.remove("modal-open");
     };
-  }, [isSubPharmacistModalOpen]);
+  }, [
+    closePdfPreviewModal,
+    closeSubPharmacistModal,
+    isPdfPreviewModalOpen,
+    isSubPharmacistModalOpen,
+  ]);
 
   useEffect(() => {
     if (!guideMode) {
@@ -625,6 +764,34 @@ function FormPage() {
     }
   };
 
+  const handleDownloadPreviewPdf = useCallback(() => {
+    if (!previewPdfBlob) {
+      return;
+    }
+
+    downloadBlob(previewPdfBlob, previewPdfFileName || "document.pdf");
+  }, [previewPdfBlob, previewPdfFileName]);
+
+  const handlePrintPreviewPdf = useCallback(() => {
+    if (!previewPdfUrl) {
+      return;
+    }
+
+    try {
+      const frameWindow = previewIframeRef.current?.contentWindow;
+      if (frameWindow) {
+        frameWindow.focus();
+        frameWindow.print();
+        return;
+      }
+    } catch (_error) {
+      // Some browser PDF viewers block direct print calls; fallback below.
+    }
+
+    const popup = window.open(previewPdfUrl, "_blank", "noopener,noreferrer");
+    popup?.focus();
+  }, [previewPdfUrl]);
+
   const handleGeneratePdf = async () => {
     setPdfGenerating(true);
     setPdfError("");
@@ -642,13 +809,13 @@ function FormPage() {
         }
       );
 
-      openOrDownloadBlob(blob, fileName);
+      openPdfPreview(blob, fileName);
 
       if (documentId) {
-        setPdfStatus(`PDF generated and saved. ID: ${documentId}`);
+        setPdfStatus(`PDF generated, preview ready, and saved. ID: ${documentId}`);
         await loadRecentDocuments();
       } else {
-        setPdfStatus("PDF generated.");
+        setPdfStatus("PDF generated and preview is ready.");
       }
     } catch (error) {
       const message = await getApiErrorMessage(
@@ -685,7 +852,7 @@ function FormPage() {
 
     try {
       const { blob, fileName } = await generatePdfFromSavedDocument(documentId);
-      openOrDownloadBlob(blob, fileName);
+      openPdfPreview(blob, fileName);
     } catch (error) {
       const message = await getApiErrorMessage(
         error,
@@ -733,10 +900,7 @@ function FormPage() {
   };
 
   const closeModal = () => {
-    setIsSubPharmacistModalOpen(false);
-    setActiveSlot(null);
-    setGuideMode(false);
-    setMissingFields({});
+    closeSubPharmacistModal();
   };
 
   const handleEditSlot = (slot) => {
@@ -1246,6 +1410,16 @@ function FormPage() {
         onSave={handleSaveSubPharmacist}
       />
 
+      <PdfPreviewModal
+        isOpen={isPdfPreviewModalOpen}
+        fileName={previewPdfFileName}
+        pdfUrl={previewPdfUrl}
+        iframeRef={previewIframeRef}
+        onClose={closePdfPreviewModal}
+        onDownload={handleDownloadPreviewPdf}
+        onPrint={handlePrintPreviewPdf}
+      />
+
       {isAdmin ? (
         <section className="section-card stack-form">
           <h2>Recent Documents</h2>
@@ -1269,7 +1443,7 @@ function FormPage() {
                 onClick={() => handleOpenSavedDocument(doc.id)}
                 disabled={openingDocId === doc.id}
               >
-                {openingDocId === doc.id ? "Opening..." : "Open PDF"}
+                {openingDocId === doc.id ? "Preparing..." : "Preview PDF"}
               </button>
             </div>
           ))}
