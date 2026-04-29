@@ -13,9 +13,10 @@ const PART_TIME_PHARMACIST_ROWS = [
   { license_id_number: 52309, title_and_name: "ภญ. เบญจวรรณ ฟักขำ" },
   { license_id_number: 51181, title_and_name: "ภญ. มนัสวี ประเสริฐศุภกุล" },
   { license_id_number: 40596, title_and_name: "ภก. ธนพล แสงทับทิม" },
-  { license_id_number: 38604, title_and_name: "ภก. ธนพล แสงทับทิม" },
+  { license_id_number: 38604, title_and_name: "ภญ. ทิพวรรณ เรืองสุข" },
   { license_id_number: 49649, title_and_name: "ภญ. ทิพยาภา ปานศุภวงศ์" },
   { license_id_number: 51337, title_and_name: "ภญ. วรรณพร ฉัตรวิชชานนท์" },
+  { license_id_number: 45976, title_and_name: "ภก. ชวิศ ดิษฐาพร" },
 ];
 
 const UPSERT_PART_TIME_PHARMACIST_SQL = `
