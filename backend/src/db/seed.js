@@ -35,6 +35,13 @@ const USER_SEEDS = [
     password: "123123",
     role: "user",
     branch_code: "004",
+    display_name_th: "ภญ. วรรณพร ฉัตรวิชชานนท์",
+  },
+  {
+    username: "user005",
+    password: "123123",
+    role: "user",
+    branch_code: "005",
     display_name_th: "ภก. ชวิศ ดิษฐาพร",
   },
 ];
