@@ -9,7 +9,7 @@
       "size": 16,
       "value": "บริษัท เอสซีกรุ๊ป (1989) จำกัด"
     },
-    "pharmacyDisplayName": { "x": 320, "y": 600, "size": 16 },
+    "pharmacyDisplayName": { "x": 320, "y": 600, "size": 16, "branchSizes": { "005": 12 } },
     "soi": { "x": 140, "y": 580, "size": 16 },
     "addressNo": { "x": 495, "y": 600, "size": 16 },
     "district": { "x": 300, "y": 580, "size": 16 },

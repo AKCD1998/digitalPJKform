@@ -156,6 +156,22 @@ function resolveNumber(value, fallback) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function resolveFieldSize(fieldConfig, payload) {
+  const branchCode = toNonEmptyString(payload?.branchCode);
+  const branchSizes =
+    fieldConfig?.branchSizes &&
+    typeof fieldConfig.branchSizes === "object" &&
+    !Array.isArray(fieldConfig.branchSizes)
+      ? fieldConfig.branchSizes
+      : null;
+
+  if (branchCode && branchSizes && Object.prototype.hasOwnProperty.call(branchSizes, branchCode)) {
+    return resolveNumber(branchSizes[branchCode], DEFAULT_TEXT_SIZE);
+  }
+
+  return resolveNumber(fieldConfig?.size, DEFAULT_TEXT_SIZE);
+}
+
 function getByPath(objectValue, dottedPath) {
   const pathText = toNonEmptyString(dottedPath);
   if (!pathText) {
@@ -281,13 +297,13 @@ function buildStampValues(payload) {
   };
 }
 
-function drawMappedField(page, font, value, fieldConfig) {
+function drawMappedField(page, font, value, fieldConfig, payload) {
   const text = toNonEmptyString(value);
   if (!text) {
     return;
   }
 
-  const size = resolveNumber(fieldConfig?.size, DEFAULT_TEXT_SIZE);
+  const size = resolveFieldSize(fieldConfig, payload);
   const x = computeAlignedX(text, font, size, fieldConfig);
   const y = resolveNumber(fieldConfig?.y, 0);
   const maxWidth = resolveNumber(fieldConfig?.maxWidth, undefined);
@@ -400,7 +416,7 @@ export async function stampTemplatePdf({ templateKey, payload }) {
 
     const rawFieldValue = resolveFieldValue(fieldName, fieldConfig, payload || {}, values);
     const fieldValue = applyFieldFormat(rawFieldValue, fieldConfig, payload || {}, values);
-    drawMappedField(page, thaiFont, fieldValue, fieldConfig);
+    drawMappedField(page, thaiFont, fieldValue, fieldConfig, payload || {});
   });
 
   const pdfBytes = await pdfDoc.save();
