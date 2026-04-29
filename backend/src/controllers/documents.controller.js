@@ -1,4 +1,5 @@
 import { CEO_NAME_TH } from "../config/constants.js";
+import { PDFDocument } from "pdf-lib";
 import {
   getDocumentById,
   insertDocumentRecord,
@@ -105,13 +106,23 @@ function mapPayloadFromUserData(userRow, documentDate, formData, templateKey, su
     phone: pickValue(data.phone, userRow.phone),
     licenseNo: pickValue(data.licenseNo, data.license_no, userRow.license_no),
     locationText: pickValue(data.locationText, data.location_text, userRow.location_text),
-    operatorTitle: pickValue(data.operatorTitle, data.operator_title, userRow.operator_title),
+    operatorTitle: pickValue(
+      data.operatorTitle,
+      data.operator_title,
+      userRow.operator_display_name_th,
+      userRow.operator_title
+    ),
     operatorWorkHours: pickValue(
       data.operatorWorkHours,
       data.operator_work_hours,
       userRow.operator_work_hours
     ),
-    displayNameTh: pickValue(data.displayNameTh, data.display_name_th, userRow.display_name_th),
+    displayNameTh: pickValue(
+      data.displayNameTh,
+      data.display_name_th,
+      userRow.operator_display_name_th,
+      userRow.display_name_th
+    ),
     subPharmacistSlots: normalizeSubPharmacistSlots(subPharmacistSlots),
     documentDate,
     currentDocumentDate: documentDate,
@@ -165,9 +176,89 @@ function buildBranchAwareUserRow(userRow, branchRow) {
     phone: branchRow.phone,
     license_no: branchRow.license_no,
     location_text: branchRow.location_text,
+    operator_display_name_th: branchRow.operator_display_name_th,
     operator_title: branchRow.operator_title,
     operator_work_hours: branchRow.operator_work_hours,
   };
+}
+
+async function resolveDocumentTarget(req, userRow, requestedBranchId) {
+  let payloadUserRow = userRow;
+  let documentBranchId = userRow.user_branch_id || null;
+
+  if (req.auth.role === "admin") {
+    const adminTargetBranchId = requestedBranchId || userRow.user_branch_id;
+    if (!adminTargetBranchId) {
+      return {
+        error: {
+          status: 400,
+          body: { error: "branchId is required for admin users without an assigned branch." },
+        },
+      };
+    }
+
+    const targetBranchRow = await findBranchById(adminTargetBranchId);
+    if (!targetBranchRow) {
+      return {
+        error: {
+          status: 404,
+          body: { error: "Branch not found." },
+        },
+      };
+    }
+
+    payloadUserRow = buildBranchAwareUserRow(userRow, targetBranchRow);
+    documentBranchId = targetBranchRow.id;
+  } else {
+    if (!userRow.user_branch_id) {
+      return {
+        error: {
+          status: 403,
+          body: { error: "Forbidden." },
+        },
+      };
+    }
+
+    if (requestedBranchId && requestedBranchId !== userRow.user_branch_id) {
+      return {
+        error: {
+          status: 403,
+          body: { error: "Forbidden." },
+        },
+      };
+    }
+  }
+
+  return {
+    documentBranchId,
+    payloadUserRow,
+  };
+}
+
+function normalizeMergedDocumentRequests(req) {
+  const documents = Array.isArray(req.body?.documents) ? req.body.documents : [];
+  return documents
+    .filter((document) => document && typeof document === "object" && !Array.isArray(document))
+    .slice(0, 50);
+}
+
+function buildMergedDownloadFileName(payloads, dateISOFallback = "document") {
+  const firstPayload = payloads[0] || {};
+  const branchCode = firstPayload.branchCode || "branch";
+  const dateISO = firstPayload?.documentDate?.dateISO || dateISOFallback;
+  return `document-${branchCode}-${dateISO}-merged.pdf`;
+}
+
+async function mergePdfBytesList(pdfBytesList) {
+  const mergedPdf = await PDFDocument.create();
+
+  for (const pdfBytes of pdfBytesList) {
+    const sourcePdf = await PDFDocument.load(pdfBytes);
+    const copiedPages = await mergedPdf.copyPages(sourcePdf, sourcePdf.getPageIndices());
+    copiedPages.forEach((page) => mergedPdf.addPage(page));
+  }
+
+  return mergedPdf.save();
 }
 
 function sendPdfResponse(
@@ -226,37 +317,14 @@ export async function generateDocumentPdf(req, res, next) {
       return res.status(404).json({ error: "User profile not found." });
     }
 
-    let payloadUserRow = userRow;
-    let documentBranchId = userRow.user_branch_id || null;
-
-    if (req.auth.role === "admin") {
-      const adminTargetBranchId = requestedBranchId || userRow.user_branch_id;
-      if (!adminTargetBranchId) {
-        return res.status(400).json({
-          error: "branchId is required for admin users without an assigned branch.",
-        });
-      }
-
-      const targetBranchRow = await findBranchById(adminTargetBranchId);
-      if (!targetBranchRow) {
-        return res.status(404).json({ error: "Branch not found." });
-      }
-
-      payloadUserRow = buildBranchAwareUserRow(userRow, targetBranchRow);
-      documentBranchId = targetBranchRow.id;
-    } else {
-      if (!userRow.user_branch_id) {
-        return res.status(403).json({ error: "Forbidden." });
-      }
-
-      if (requestedBranchId && requestedBranchId !== userRow.user_branch_id) {
-        return res.status(403).json({ error: "Forbidden." });
-      }
+    const target = await resolveDocumentTarget(req, userRow, requestedBranchId);
+    if (target.error) {
+      return res.status(target.error.status).json(target.error.body);
     }
 
     const documentDate = await getCurrentDocumentDate();
     const pdfPayload = mapPayloadFromUserData(
-      payloadUserRow,
+      target.payloadUserRow,
       documentDate,
       formData,
       templateKey,
@@ -270,7 +338,7 @@ export async function generateDocumentPdf(req, res, next) {
 
     let documentId = null;
     if (shouldSaveDocument(req)) {
-      if (!documentBranchId) {
+      if (!target.documentBranchId) {
         return res.status(400).json({
           error: "Unable to save document because target branch is missing.",
         });
@@ -278,7 +346,7 @@ export async function generateDocumentPdf(req, res, next) {
 
       const saved = await insertDocumentRecord({
         createdBy: req.auth.userId,
-        branchId: documentBranchId,
+        branchId: target.documentBranchId,
         payload: pdfPayload,
       });
       documentId = saved.id;
@@ -287,6 +355,85 @@ export async function generateDocumentPdf(req, res, next) {
     const fileName = buildDownloadFileName(pdfPayload, documentDate.dateISO);
 
     return sendPdfResponse(res, pdfBytes, fileName, documentId);
+  } catch (error) {
+    return handlePdfError(error, res, next);
+  }
+}
+
+export async function generateMergedDocumentPdf(req, res, next) {
+  try {
+    const requestedBranchId = toNonEmptyString(req.body?.branchId);
+    const documentRequests = normalizeMergedDocumentRequests(req);
+    const userRow = await findUserWithBranchById(req.auth.userId);
+
+    if (!userRow) {
+      return res.status(404).json({ error: "User profile not found." });
+    }
+
+    if (documentRequests.length === 0) {
+      return res.status(400).json({ error: "documents must contain at least one document payload." });
+    }
+
+    const target = await resolveDocumentTarget(req, userRow, requestedBranchId);
+    if (target.error) {
+      return res.status(target.error.status).json(target.error.body);
+    }
+
+    const documentDate = await getCurrentDocumentDate();
+    const pdfBytesList = [];
+    const pdfPayloads = [];
+
+    for (const documentRequest of documentRequests) {
+      const templateKey =
+        toNonEmptyString(documentRequest.templateKey) ||
+        toNonEmptyString(req.body?.templateKey) ||
+        DEFAULT_TEMPLATE_KEY;
+      const formData = documentRequest.formData || {};
+      const subPharmacistSlots = normalizeSubPharmacistSlots(
+        documentRequest.subPharmacistSlots || formData?.subPharmacistSlots
+      );
+      const pdfPayload = mapPayloadFromUserData(
+        target.payloadUserRow,
+        documentDate,
+        formData,
+        templateKey,
+        subPharmacistSlots
+      );
+      const { pdfBytes, templateKey: resolvedTemplateKey } = await stampTemplatePdf({
+        templateKey,
+        payload: pdfPayload,
+      });
+
+      pdfPayload.templateKey = resolvedTemplateKey;
+      pdfBytesList.push(pdfBytes);
+      pdfPayloads.push(pdfPayload);
+    }
+
+    const mergedPdfBytes = await mergePdfBytesList(pdfBytesList);
+
+    let documentId = null;
+    if (shouldSaveDocument(req)) {
+      if (!target.documentBranchId) {
+        return res.status(400).json({
+          error: "Unable to save document because target branch is missing.",
+        });
+      }
+
+      const saved = await insertDocumentRecord({
+        createdBy: req.auth.userId,
+        branchId: target.documentBranchId,
+        payload: {
+          merged: true,
+          documentCount: pdfPayloads.length,
+          documents: pdfPayloads,
+        },
+      });
+      documentId = saved.id;
+    }
+
+    const fileName = buildMergedDownloadFileName(pdfPayloads, documentDate.dateISO);
+
+    return sendPdfResponse(res, mergedPdfBytes, fileName, documentId);
   } catch (error) {
     return handlePdfError(error, res, next);
   }
