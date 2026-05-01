@@ -559,6 +559,16 @@ button:disabled {
   font-weight: 700;
 }
 
+.supportDocsLicenseeCard {
+  margin-top: 4px;
+  width: min(360px, 100%);
+  background: #fff;
+  border: 1px solid rgba(31, 53, 76, 0.14);
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: 0 8px 18px rgba(31, 53, 76, 0.06);
+}
+
 .modalBackdrop {
   position: fixed;
   inset: 0;

@@ -123,10 +123,11 @@ Add a new branch:
 
 Seeded users:
 
-- `admin000` / `Admin@123` (`admin`, branch `001`)
-- `user001` / `User@123` (`user`, branch `001`)
-- `user003` / `User@123` (`user`, branch `003`)
-- `user004` / `User@123` (`user`, branch `004`)
+- `admin000` / `S123123c` (`admin`, branch `001`)
+- `user001` / `123123` (`user`, branch `001`)
+- `user003` / `123123` (`user`, branch `003`)
+- `user004` / `123123` (`user`, branch `004`)
+- `user005` / `123123` (`user`, branch `005`)
 
 ## Health Check
 

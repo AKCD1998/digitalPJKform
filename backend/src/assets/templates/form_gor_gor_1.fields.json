@@ -163,6 +163,14 @@
       "y": 200,
       "size": 16
     },
+    "licenseeNameTh": {
+      "page": 0,
+      "x": 333,
+      "y": 86,
+      "size": 16,
+      "maxWidth": 140,
+      "align": "center"
+    },
     "dateDay": { "x": 96, "y": 281, "size": 20, "maxWidth": 40, "align": "center", "source": "" },
     "dateMonthNameTh": { "x": 225, "y": 281, "size": 20, "maxWidth": 92, "align": "center", "source": "" },
     "dateYearBE": { "x": 418, "y": 281, "size": 20, "maxWidth": 72, "align": "center", "source": "" }

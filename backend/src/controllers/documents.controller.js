@@ -39,6 +39,8 @@ const KNOWN_FORM_KEYS = new Set([
   "pharmacyDisplayName",
   "displayNameTh",
   "display_name_th",
+  "licenseeNameTh",
+  "licensee_name_th",
   "subPharmacistSlots",
   "sub_pharmacist_slots",
 ]);
@@ -94,6 +96,7 @@ function mapPayloadFromUserData(userRow, documentDate, formData, templateKey, su
   return {
     templateKey: toNonEmptyString(templateKey) || DEFAULT_TEMPLATE_KEY,
     ceoNameTh: CEO_NAME_TH,
+    licenseeNameTh: pickValue(data.licenseeNameTh, data.licensee_name_th, CEO_NAME_TH),
     branchCode: pickValue(data.branchCode, data.branch_code, userRow.branch_code),
     pharmacyNameTh,
     branchNameTh,

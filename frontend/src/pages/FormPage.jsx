@@ -15,6 +15,7 @@ import { useAuth } from "../components/AuthProvider.jsx";
 import "react-day-picker/style.css";
 
 const CEO_NAME_TH = "ทรงพล ลิ้มพิสูจน์";
+const LICENSEE_NAME_TH = CEO_NAME_TH;
 const TEMPLATE_OPTIONS = [
   {
     key: "form_gor_gor_1",
@@ -514,6 +515,7 @@ function FormPage() {
   const { user, documentDate, updateDocumentDate, clearSession } = useAuth();
 
   const [formData, setFormData] = useState({
+    licenseeNameTh: LICENSEE_NAME_TH,
     branchCode: "",
     pharmacyNameTh: "",
     branchNameTh: "",
@@ -1653,6 +1655,12 @@ function FormPage() {
             <span className="supportDocsIndex">๒.</span>
             <span>อื่น ๆ</span>
           </p>
+          <div className="supportDocsLicenseeCard">
+            <label className="pjkLabel">
+              <span className="pjkLabelText">ผู้รับอนุญาต</span>
+              <input className="pjkInput" value={formData.licenseeNameTh} readOnly />
+            </label>
+          </div>
         </div>
       </section>
 

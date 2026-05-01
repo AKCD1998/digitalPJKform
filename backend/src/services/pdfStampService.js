@@ -270,10 +270,14 @@ function buildStampValues(payload) {
     payload?.subPharmacistSlots
   );
 
+  const ceoNameTh = toNonEmptyString(payload?.ceoNameTh);
+  const licenseeNameTh = toNonEmptyString(payload?.licenseeNameTh) || ceoNameTh;
+
   return {
     ...extraFields,
-    ceoNameTh: toNonEmptyString(payload?.ceoNameTh),
-    fullName: toNonEmptyString(payload?.ceoNameTh),
+    ceoNameTh,
+    licenseeNameTh,
+    fullName: ceoNameTh,
     pharmacyDisplayName,
     pharmacyName: pharmacyDisplayName,
     pharmacyNameTh: toNonEmptyString(payload?.pharmacyNameTh),
