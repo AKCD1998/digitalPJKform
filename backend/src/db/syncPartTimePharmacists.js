@@ -1,7 +1,7 @@
 import "dotenv/config";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { closePool, pool } from "./pool.js";
+import { closePool, hasDatabase, pool } from "./pool.js";
 
 const PART_TIME_PHARMACIST_ROWS = [
   { license_id_number: 32515, title_and_name: "ภญ. ปิยวดี ตั้งวิชิตฤกษ์" },
@@ -73,8 +73,8 @@ async function upsertOnePartTimePharmacist(client, row) {
 }
 
 export async function syncPartTimePharmacists(clientArg = null) {
-  if (!process.env.DATABASE_URL) {
-    throw new Error("DATABASE_URL is required to sync part-time pharmacists.");
+  if (!hasDatabase()) {
+    throw new Error("DIGITALPJK_DATABASE_URL is required to sync part-time pharmacists.");
   }
 
   assertUniqueLicenseNumbers(PART_TIME_PHARMACIST_ROWS);

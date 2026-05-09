@@ -7,26 +7,25 @@ services:
     autoDeploy: true
     healthCheckPath: /api/health
     buildCommand: npm ci
-    preDeployCommand: npm run migrate --workspace backend && npm run syncBranchesFromFiles --workspace backend
     startCommand: npm run start --workspace backend
     envVars:
-      - key: DATABASE_URL
+      - key: DIGITALPJK_DATABASE_URL
         sync: false
-      - key: JWT_SECRET
+      - key: DIGITALPJK_JWT_SECRET
         generateValue: true
-      - key: JWT_EXPIRES_IN
+      - key: DIGITALPJK_JWT_EXPIRES_IN
         value: "1h"
-      - key: CEO_NAME_TH
+      - key: DIGITALPJK_CEO_NAME_TH
         value: "ทรงพล ลิ้มพิสูจน์"
       - key: CORS_ORIGIN
         value: "https://digitalpjkformsite.onrender.com"
-      - key: LOGIN_RATE_LIMIT_WINDOW_MS
+      - key: DIGITALPJK_LOGIN_RATE_LIMIT_WINDOW_MS
         value: "60000"
-      - key: LOGIN_RATE_LIMIT_MAX
+      - key: DIGITALPJK_LOGIN_RATE_LIMIT_MAX
         value: "5"
-      - key: PDF_WRITE_SAMPLE
+      - key: DIGITALPJK_PDF_WRITE_SAMPLE
         value: "false"
-      - key: PDF_SAMPLE_DIR
+      - key: DIGITALPJK_PDF_SAMPLE_DIR
         value: ""
 
   - type: web
@@ -39,8 +38,10 @@ services:
     staticPublishPath: frontend/dist
     pullRequestPreviewsEnabled: false
     envVars:
-      - key: VITE_API_BASE_URL
-        value: "https://digitalpjkform.onrender.com"
+      - key: VITE_DIGITALPJK_API_BASE_URL
+        value: "https://sc-official-website.onrender.com"
+      - key: VITE_DIGITALPJK_API_PREFIX
+        value: "/api/digitalpjk"
     routes:
       - type: rewrite
         source: /*

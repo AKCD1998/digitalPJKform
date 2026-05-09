@@ -1,12 +1,12 @@
 const attemptsByIp = new Map();
 
 function getWindowMs() {
-  const parsed = Number(process.env.LOGIN_RATE_LIMIT_WINDOW_MS);
+  const parsed = Number(process.env.DIGITALPJK_LOGIN_RATE_LIMIT_WINDOW_MS);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 60_000;
 }
 
 function getMaxAttempts() {
-  const parsed = Number(process.env.LOGIN_RATE_LIMIT_MAX);
+  const parsed = Number(process.env.DIGITALPJK_LOGIN_RATE_LIMIT_MAX);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 5;
 }
 

@@ -1,7 +1,7 @@
 import "dotenv/config";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { closePool, pool } from "./pool.js";
+import { closePool, hasDatabase, pool } from "./pool.js";
 import { loadBranchConfigs } from "../services/branchConfigService.js";
 
 const UPSERT_BRANCH_SQL = `
@@ -73,8 +73,8 @@ async function upsertOneBranch(client, branch) {
 }
 
 export async function syncBranchesFromFiles(clientArg = null) {
-  if (!process.env.DATABASE_URL) {
-    throw new Error("DATABASE_URL is required to sync branches from files.");
+  if (!hasDatabase()) {
+    throw new Error("DIGITALPJK_DATABASE_URL is required to sync branches from files.");
   }
 
   const branches = await loadBranchConfigs();

@@ -2,7 +2,7 @@ import "dotenv/config";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import bcrypt from "bcrypt";
-import { closePool, pool } from "./pool.js";
+import { closePool, hasDatabase, pool } from "./pool.js";
 import { syncBranchesFromFiles } from "./syncBranchesFromFiles.js";
 import { syncPartTimePharmacists } from "./syncPartTimePharmacists.js";
 
@@ -82,8 +82,8 @@ async function upsertUser(client, user, branchId) {
 }
 
 export async function runSeed() {
-  if (!process.env.DATABASE_URL) {
-    throw new Error("DATABASE_URL is required to run seed.");
+  if (!hasDatabase()) {
+    throw new Error("DIGITALPJK_DATABASE_URL is required to run seed.");
   }
 
   const client = await pool.connect();

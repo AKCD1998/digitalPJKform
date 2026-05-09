@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { fetchHealth } from "../api/health.js";
 
 function HealthStatus() {
-  const [statusText, setStatusText] = useState("Checking /api/health...");
+  const [statusText, setStatusText] = useState("Checking health API...");
 
   useEffect(() => {
     let active = true;

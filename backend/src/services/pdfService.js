@@ -164,11 +164,11 @@ function mapExtraFields(extraFields) {
 }
 
 async function maybeWriteSamplePdf(pdfBytes) {
-  if (process.env.PDF_WRITE_SAMPLE !== "true") {
+  if (process.env.DIGITALPJK_PDF_WRITE_SAMPLE !== "true") {
     return null;
   }
 
-  const outputDir = process.env.PDF_SAMPLE_DIR || os.tmpdir();
+  const outputDir = process.env.DIGITALPJK_PDF_SAMPLE_DIR || os.tmpdir();
   await mkdir(outputDir, { recursive: true });
 
   const samplePath = path.join(outputDir, `digitalPjkform-sample-${Date.now()}.pdf`);

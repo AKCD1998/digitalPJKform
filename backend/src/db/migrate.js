@@ -2,7 +2,7 @@ import "dotenv/config";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { closePool, pool } from "./pool.js";
+import { closePool, hasDatabase, pool } from "./pool.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -30,8 +30,8 @@ async function getPendingMigrations(client) {
 }
 
 export async function runMigrations() {
-  if (!process.env.DATABASE_URL) {
-    throw new Error("DATABASE_URL is required to run migrations.");
+  if (!hasDatabase()) {
+    throw new Error("DIGITALPJK_DATABASE_URL is required to run migrations.");
   }
 
   const client = await pool.connect();

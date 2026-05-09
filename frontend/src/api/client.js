@@ -1,6 +1,20 @@
 import axios from "axios";
 
-const baseURL = import.meta.env.VITE_API_BASE_URL || "/api";
+function trimTrailingSlash(value) {
+  return String(value || "").trim().replace(/\/+$/, "");
+}
+
+function normalizePrefix(value) {
+  const normalized = String(value || "").trim().replace(/^\/+|\/+$/g, "");
+  return normalized ? `/${normalized}` : "";
+}
+
+const projectApiBase = trimTrailingSlash(import.meta.env.VITE_DIGITALPJK_API_BASE_URL);
+const projectApiPrefix = normalizePrefix(import.meta.env.VITE_DIGITALPJK_API_PREFIX);
+
+const baseURL = projectApiBase
+  ? `${projectApiBase}${projectApiPrefix || "/api/digitalpjk"}`
+  : projectApiPrefix || "/api";
 
 const client = axios.create({
   baseURL,

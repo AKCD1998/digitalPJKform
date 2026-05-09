@@ -1,7 +1,6 @@
+import client from "./client.js";
+
 export async function fetchHealth() {
-  const response = await fetch("/api/health");
-  if (!response.ok) {
-    throw new Error(`Health check failed (${response.status})`);
-  }
-  return response.json();
+  const response = await client.get("/health");
+  return response.data;
 }
