@@ -63,7 +63,8 @@ backend/src/routes/*
 
 frontend/src/api/client.js
   -> VITE_DIGITALPJK_API_BASE_URL + VITE_DIGITALPJK_API_PREFIX
-  -> fallback to same-origin /api only when project vars are absent
+  -> production fallback to https://sc-official-website.onrender.com/api/digitalpjk
+  -> local development fallback to same-origin /api
 ```
 
 ## Folder And File Map
@@ -224,7 +225,7 @@ Frontend API client:
 frontend/src/api/client.js
 ```
 
-Required shared-service frontend env:
+Preferred shared-service frontend env:
 
 ```text
 VITE_DIGITALPJK_API_BASE_URL
@@ -239,6 +240,8 @@ VITE_DIGITALPJK_API_PREFIX=/api/digitalpjk
 ```
 
 `VITE_API_BASE_URL` is intentionally no longer used by DigitalPJK code. This avoids baking another project's backend URL into the DigitalPJK production bundle.
+
+If the static Render service does not expose the project-scoped Vite variables, production builds fall back to the shared backend origin and `/api/digitalpjk`. These fallback values are public routing config, not secrets.
 
 ## Deployment Files
 
