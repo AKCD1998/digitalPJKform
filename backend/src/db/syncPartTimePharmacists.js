@@ -17,6 +17,9 @@ const PART_TIME_PHARMACIST_ROWS = [
   { license_id_number: 49649, title_and_name: "ภญ. ทิพยาภา ปานศุภวงศ์" },
   { license_id_number: 51337, title_and_name: "ภญ. วรรณพร ฉัตรวิชชานนท์" },
   { license_id_number: 45976, title_and_name: "ภก. ชวิศ ดิษฐาพร" },
+  { license_id_number: 25418, title_and_name: "ภญ. อัจฉรี อาสินวิริยะ" },
+  { license_id_number: 54517, title_and_name: "ภก. สิรวิชญ์ คงจินต์ชัย" },
+  { license_id_number: 53545, title_and_name: "ภก. อธิพัฒน์ แช่มรัมย์" },
 ];
 
 const UPSERT_PART_TIME_PHARMACIST_SQL = `
